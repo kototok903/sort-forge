@@ -1,4 +1,4 @@
-import type { IRenderer, RenderState, BarState } from './types';
+import type { IRenderer, RenderState, BarState } from '@/renderer/types';
 
 /** Color palette for bar states */
 const COLORS: Record<BarState, string> = {

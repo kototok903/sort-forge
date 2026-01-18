@@ -1,4 +1,4 @@
-import type { SortEvent } from '../types';
+import type { SortEvent } from "@/types/events";
 
 /**
  * Common interface for sorting engines.

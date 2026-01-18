@@ -1,4 +1,4 @@
-import type { PlaybackState } from '../controller';
+import type { PlaybackState } from '@/controller/AnimationController';
 
 interface ControlsProps {
   playbackState: PlaybackState;

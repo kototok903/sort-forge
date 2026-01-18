@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import type { IRenderer } from '../renderer';
+import type { IRenderer } from '@/renderer/types';
 
 interface CanvasProps {
   renderer: IRenderer;

@@ -1,5 +1,5 @@
-import type { SortEvent } from '../types';
-import type { ISortEngine, PregenResult } from './types';
+import type { SortEvent } from '@/types/events';
+import type { ISortEngine, PregenResult } from '@/engines/types';
 
 // Wasm module - will be initialized lazily
 let wasmModule: typeof import('sort-forge-core') | null = null;

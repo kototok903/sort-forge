@@ -1,7 +1,7 @@
-import type { SortEvent } from '../types';
-import type { ISortEngine } from '../engines/types';
-import type { RenderState, BarState, IRenderer } from '../renderer';
-import { inverseEvent } from '../types';
+import type { SortEvent } from '@/types/events';
+import type { ISortEngine } from '@/engines/types';
+import type { RenderState, BarState, IRenderer } from '@/renderer/types';
+import { inverseEvent } from '@/types/events';
 
 export type PlaybackState = 'idle' | 'playing' | 'paused' | 'done';
 

@@ -3,7 +3,7 @@
  * These mirror the exports from rust-core/pkg/sort_forge_core.d.ts
  */
 declare module 'sort-forge-core' {
-  import type { SortEvent } from './events';
+  import type { SortEvent } from '@/types/events';
 
   /** Get list of available algorithms */
   export function get_available_algorithms(): string[];

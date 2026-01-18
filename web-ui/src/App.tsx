@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Canvas, Controls, Settings } from './components';
-import { CanvasRenderer } from './renderer';
-import { AnimationController, type ControllerState } from './controller';
-import { PregenEngine, initWasm, getAvailableAlgorithms } from './engines';
+import { Canvas } from '@/components/Canvas';
+import { Controls } from '@/components/Controls';
+import { Settings } from '@/components/Settings';
+import { CanvasRenderer } from '@/renderer/CanvasRenderer';
+import { AnimationController, type ControllerState } from '@/controller/AnimationController';
+import { PregenEngine, initWasm, getAvailableAlgorithms } from '@/engines/PregenEngine';
 
 /** Generate a random array of the given size */
 function generateRandomArray(size: number): number[] {
