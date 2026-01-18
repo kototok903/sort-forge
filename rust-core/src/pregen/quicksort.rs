@@ -33,7 +33,7 @@ fn quicksort_recursive(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec
     let pivot_idx = partition(array, lo, hi, events);
 
     // Exit before recursing (range is done being partitioned)
-    events.push(SortEvent::ExitRange);
+    events.push(SortEvent::ExitRange { lo, hi });
 
     // Recurse on left partition
     if pivot_idx > lo {
@@ -137,7 +137,7 @@ mod tests {
         let events = QuickSort::sort(&mut array);
 
         let enter_count = events.iter().filter(|e| matches!(e, SortEvent::EnterRange { .. })).count();
-        let exit_count = events.iter().filter(|e| matches!(e, SortEvent::ExitRange)).count();
+        let exit_count = events.iter().filter(|e| matches!(e, SortEvent::ExitRange { .. })).count();
 
         // Should have balanced Enter/Exit events
         assert_eq!(enter_count, exit_count);

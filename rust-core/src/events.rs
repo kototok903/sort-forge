@@ -23,8 +23,8 @@ pub enum SortEvent {
     /// Entering a subarray range (e.g., quicksort partition, mergesort merge).
     EnterRange { lo: usize, hi: usize },
 
-    /// Exiting the current subarray range.
-    ExitRange,
+    /// Exiting the current subarray range. Stores lo/hi for invertibility.
+    ExitRange { lo: usize, hi: usize },
 
     /// Sorting is complete.
     Done,
@@ -32,7 +32,8 @@ pub enum SortEvent {
 
 impl SortEvent {
     /// Returns the inverse of this event for rewinding.
-    /// Stateless events (Compare, EnterRange, ExitRange, Done) return themselves.
+    /// Stateless events (Compare, Done) return themselves.
+    /// EnterRange and ExitRange are inverses of each other.
     pub fn inverse(&self) -> SortEvent {
         match self {
             // Swap is self-inverse
@@ -44,6 +45,10 @@ impl SortEvent {
                 old_val: *new_val,
                 new_val: *old_val,
             },
+
+            // EnterRange and ExitRange are inverses of each other
+            SortEvent::EnterRange { lo, hi } => SortEvent::ExitRange { lo: *lo, hi: *hi },
+            SortEvent::ExitRange { lo, hi } => SortEvent::EnterRange { lo: *lo, hi: *hi },
 
             // Stateless events are their own inverse
             other => other.clone(),
@@ -95,6 +100,22 @@ mod tests {
     }
 
     #[test]
+    fn test_range_events_inverse() {
+        let enter = SortEvent::EnterRange { lo: 5, hi: 15 };
+        let exit = SortEvent::ExitRange { lo: 5, hi: 15 };
+
+        // EnterRange inverse is ExitRange with same bounds
+        assert_eq!(enter.inverse(), SortEvent::ExitRange { lo: 5, hi: 15 });
+
+        // ExitRange inverse is EnterRange with same bounds
+        assert_eq!(exit.inverse(), SortEvent::EnterRange { lo: 5, hi: 15 });
+
+        // Double inverse returns to original
+        assert_eq!(enter.inverse().inverse(), enter);
+        assert_eq!(exit.inverse().inverse(), exit);
+    }
+
+    #[test]
     fn test_is_mutation() {
         assert!(SortEvent::Swap { i: 0, j: 1 }.is_mutation());
         assert!(SortEvent::Overwrite {
@@ -105,7 +126,7 @@ mod tests {
         .is_mutation());
         assert!(!SortEvent::Compare { i: 0, j: 1 }.is_mutation());
         assert!(!SortEvent::EnterRange { lo: 0, hi: 10 }.is_mutation());
-        assert!(!SortEvent::ExitRange.is_mutation());
+        assert!(!SortEvent::ExitRange { lo: 0, hi: 10 }.is_mutation());
         assert!(!SortEvent::Done.is_mutation());
     }
 }

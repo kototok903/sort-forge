@@ -33,6 +33,8 @@ export interface EnterRangeEvent {
 
 export interface ExitRangeEvent {
   type: 'ExitRange';
+  lo: number;
+  hi: number;
 }
 
 export interface DoneEvent {
@@ -50,7 +52,8 @@ export type SortEvent =
 
 /**
  * Returns the inverse of a sort event for rewinding.
- * Stateless events return themselves.
+ * Stateless events (Compare, Done) return themselves.
+ * EnterRange and ExitRange are inverses of each other.
  */
 export function inverseEvent(event: SortEvent): SortEvent {
   switch (event.type) {
@@ -65,8 +68,22 @@ export function inverseEvent(event: SortEvent): SortEvent {
         old_val: event.new_val,
         new_val: event.old_val,
       };
+    case 'EnterRange':
+      // EnterRange inverse is ExitRange with same bounds
+      return {
+        type: 'ExitRange',
+        lo: event.lo,
+        hi: event.hi,
+      };
+    case 'ExitRange':
+      // ExitRange inverse is EnterRange with same bounds
+      return {
+        type: 'EnterRange',
+        lo: event.lo,
+        hi: event.hi,
+      };
     default:
-      // Stateless events are their own inverse
+      // Stateless events (Compare, Done) are their own inverse
       return event;
   }
 }
