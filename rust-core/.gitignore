@@ -1,0 +1,14 @@
+# Build output
+/target/
+
+# wasm-pack build output
+/pkg/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
