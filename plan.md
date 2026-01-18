@@ -156,6 +156,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ### 8.1 Performance
 - [ ] Profile Canvas rendering for large arrays
 - [ ] Optimize event batch sizes
+- [ ] Add seek checkpoints for timeline scrubbing to avoid replay-from-start (defer)
 
 ### 8.2 UX Enhancements
 - [ ] Add algorithm statistics display (comparisons, swaps, time)

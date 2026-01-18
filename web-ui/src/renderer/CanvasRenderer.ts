@@ -15,8 +15,9 @@ const DIMMED_COLOR = '#374151'; // gray-700
 /** Background color */
 const BG_COLOR = '#111827'; // gray-900
 
-/** Gap between bars in pixels */
-const BAR_GAP = 1;
+/** Gap sizing for bars */
+const BAR_GAP_RATIO = 0.15;
+const BAR_GAP_MAX = 2;
 
 /**
  * Canvas-based renderer for sort visualization.
@@ -32,14 +33,14 @@ export class CanvasRenderer implements IRenderer {
   }
 
   resize(): void {
-    if (!this.canvas) return;
+    if (!this.canvas || !this.ctx) return;
 
     // Match canvas internal size to display size for sharp rendering
     const rect = this.canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = rect.width * dpr;
-    this.canvas.height = rect.height * dpr;
-    this.ctx?.scale(dpr, dpr);
+    this.canvas.width = Math.floor(rect.width * dpr);
+    this.canvas.height = Math.floor(rect.height * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   clear(): void {
@@ -53,7 +54,7 @@ export class CanvasRenderer implements IRenderer {
   render(state: RenderState): void {
     if (!this.canvas || !this.ctx) return;
 
-    const { array, barStates, activeRange } = state;
+    const { array, barStates, activeRange, minValue, maxValue } = state;
     const rect = this.canvas.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
@@ -64,10 +65,16 @@ export class CanvasRenderer implements IRenderer {
     if (array.length === 0) return;
 
     // Calculate bar dimensions
-    const totalGapWidth = BAR_GAP * (array.length - 1);
-    const barWidth = (width - totalGapWidth) / array.length;
-    const maxValue = Math.max(...array);
-    const minValue = Math.min(...array);
+    const barCount = array.length;
+    const rawBarWidth = width / barCount;
+    let gap = barCount > 1 ? Math.min(BAR_GAP_MAX, rawBarWidth * BAR_GAP_RATIO) : 0;
+    let totalGapWidth = gap * (barCount - 1);
+    let barWidth = (width - totalGapWidth) / barCount;
+    if (barWidth <= 0) {
+      gap = 0;
+      totalGapWidth = 0;
+      barWidth = width / barCount;
+    }
     const valueRange = maxValue - minValue || 1;
 
     // Draw each bar
@@ -80,7 +87,7 @@ export class CanvasRenderer implements IRenderer {
       const barHeight = Math.max(2, normalizedValue * (height - 20) + 10);
 
       // Calculate bar position
-      const x = i * (barWidth + BAR_GAP);
+      const x = i * (barWidth + gap);
       const y = height - barHeight;
 
       // Determine color based on state and range

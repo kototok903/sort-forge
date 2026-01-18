@@ -25,6 +25,8 @@ export class AnimationController {
   // Array state
   private initialArray: number[] = [];
   private array: number[] = [];
+  private minValue = 0;
+  private maxValue = 1;
 
   // Playback state
   private playbackState: PlaybackState = 'idle';
@@ -63,6 +65,13 @@ export class AnimationController {
     this.engine = engine;
     this.initialArray = [...array];
     this.array = [...array];
+    if (array.length > 0) {
+      this.minValue = Math.min(...array);
+      this.maxValue = Math.max(...array);
+    } else {
+      this.minValue = 0;
+      this.maxValue = 1;
+    }
 
     await engine.initialize(algorithm, array);
 
@@ -81,6 +90,9 @@ export class AnimationController {
   play(): void {
     if (this.playbackState === 'done') {
       this.reset();
+    }
+    if (this.engine?.canSeek) {
+      this.engine.seek(this.currentStep);
     }
     this.playbackState = 'playing';
     this.lastFrameTime = performance.now();
@@ -128,6 +140,9 @@ export class AnimationController {
     if (event) {
       this.applyEvent(event);
       this.currentStep++;
+      if (this.engine.canSeek) {
+        this.engine.seek(this.currentStep);
+      }
 
       if (this.currentStep >= this.totalSteps) {
         this.playbackState = 'done';
@@ -146,7 +161,11 @@ export class AnimationController {
     this.currentStep--;
     const event = this.engine.getEventAt(this.currentStep);
     if (event) {
-      this.applyEvent(inverseEvent(event));
+      this.applyEventToArray(inverseEvent(event));
+    }
+    this.applyVisualStateForStep(this.currentStep);
+    if (this.engine.canSeek) {
+      this.engine.seek(this.currentStep);
     }
 
     if (this.playbackState === 'done') {
@@ -185,6 +204,9 @@ export class AnimationController {
     }
 
     this.currentStep = targetStep;
+    if (this.engine.canSeek) {
+      this.engine.seek(this.currentStep);
+    }
 
     if (this.currentStep >= this.totalSteps) {
       this.playbackState = 'done';
@@ -235,11 +257,11 @@ export class AnimationController {
       const msPerEvent = 1000 / (this.eventsPerSecond * this.speed);
       this.accumulatedTime += deltaTime;
 
-      while (this.accumulatedTime >= msPerEvent && this.currentStep < this.totalSteps) {
-        this.accumulatedTime -= msPerEvent;
-
-        const event = this.engine?.getEventAt(this.currentStep);
-        if (event) {
+      const eventsToProcess = Math.floor(this.accumulatedTime / msPerEvent);
+      if (eventsToProcess > 0 && this.engine) {
+        this.accumulatedTime -= eventsToProcess * msPerEvent;
+        const batch = this.engine.getNextEvents(eventsToProcess);
+        for (const event of batch) {
           this.applyEvent(event);
           this.currentStep++;
         }
@@ -323,11 +345,29 @@ export class AnimationController {
     }
   }
 
+  private applyVisualStateForStep(step: number): void {
+    if (!this.engine) return;
+
+    if (step <= 0) {
+      this.barStates.fill('default');
+      return;
+    }
+
+    const event = this.engine.getEventAt(step - 1);
+    if (event) {
+      this.applyVisualState(event);
+    } else {
+      this.barStates.fill('default');
+    }
+  }
+
   private render(): void {
     if (!this.renderer) return;
 
     const state: RenderState = {
       array: this.array,
+      minValue: this.minValue,
+      maxValue: this.maxValue,
       barStates: this.barStates,
       activeRange: this.activeRange,
     };

@@ -10,6 +10,12 @@ export interface RenderState {
   /** The current array values */
   array: number[];
 
+  /** Fixed minimum value for consistent scaling during a run */
+  minValue: number;
+
+  /** Fixed maximum value for consistent scaling during a run */
+  maxValue: number;
+
   /** Visual state for each bar (indexed by array position) */
   barStates: BarState[];
 
