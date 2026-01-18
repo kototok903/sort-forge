@@ -16,6 +16,7 @@ export default defineConfig({
   // Resolve wasm-pack output from rust-core
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, './src'),
       'sort-forge-core': path.resolve(__dirname, '../rust-core/pkg'),
     },
   },

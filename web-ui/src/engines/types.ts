@@ -38,9 +38,3 @@ export interface ISortEngine {
   /** Whether the sort has completed */
   isDone(): boolean;
 }
-
-/** Result from pregen_sort_with_result */
-export interface PregenResult {
-  events: SortEvent[];
-  sorted_array: number[];
-}

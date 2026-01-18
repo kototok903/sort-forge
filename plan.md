@@ -9,83 +9,85 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 1: Project Setup & Foundation
 
 ### 1.1 Initialize Project Structure
-- [ ] Create `rust-core/` directory with Cargo workspace
-- [ ] Create `web-ui/` directory with Vite + React + TypeScript
-- [ ] Configure `wasm-pack` and `wasm-bindgen` in Rust
-- [ ] Set up build scripts for Rust → Wasm compilation
-- [ ] Configure Vite to load `.wasm` modules
+- [x] Create `rust-core/` directory with Cargo workspace
+- [x] Create `web-ui/` directory with Vite + React + TypeScript
+- [x] Configure `wasm-pack` and `wasm-bindgen` in Rust
+- [x] Set up build scripts for Rust → Wasm compilation
+- [x] Configure Vite to load `.wasm` modules
 
 ### 1.2 Define Shared Types
-- [ ] Create `events.rs` with `SortEvent` enum:
+- [x] Create `events.rs` with `SortEvent` enum:
   - `Swap(usize, usize)`
   - `Overwrite { idx, old_val, new_val }`
   - `Compare(usize, usize)`
   - `EnterRange { lo, hi }`
-  - `ExitRange`
+  - `ExitRange { lo, hi }`
   - `Done`
-- [ ] Set up `serde` serialization for events
-- [ ] Create corresponding TypeScript types in `types.ts`
+- [x] Set up `serde` serialization for events
+- [x] Create corresponding TypeScript types in `types.ts`
 
 ---
 
 ## Phase 2: V1 Engine (Pregeneration)
 
 ### 2.1 Rust - Pregeneration Module
-- [ ] Create `pregen/mod.rs` with trait for pregeneration algorithms
-- [ ] Implement `pregen/bubble.rs` - standard bubble sort with event emission
-- [ ] Implement `pregen/quick_sort.rs` - standard quicksort with event emission
-- [ ] Create public Wasm function: `pregen_sort(algorithm: &str, array: Vec<i32>) -> Vec<SortEvent>`
-- [ ] Add unit tests for event correctness
+- [x] Create `pregen/mod.rs` with trait for pregeneration algorithms
+- [x] Implement `pregen/bubble_sort.rs` - standard bubble sort with event emission
+- [x] Implement `pregen/quicksort.rs` - standard quicksort with event emission
+- [x] Create public Wasm functions:
+  - `pregen_sort(algorithm: &str, array: JsValue) -> JsValue`
+  - `pregen_sort_with_result(algorithm: &str, array: JsValue) -> JsValue`
+- [x] Add unit tests for event correctness
 
 ### 2.2 TypeScript - Pregen Engine Wrapper
-- [ ] Create `engines/PregenEngine.ts` implementing `ISortEngine` interface
-- [ ] Load Wasm module and call pregeneration function
-- [ ] Store full event list in memory
-- [ ] Implement `getEventAt(index)` for random access
+- [x] Create `engines/PregenEngine.ts` implementing `ISortEngine` interface
+- [x] Load Wasm module and call pregeneration function
+- [x] Store full event list in memory
+- [x] Implement `getEventAt(index)` for random access
 
 ---
 
 ## Phase 3: Core UI & Rendering
 
 ### 3.1 Canvas Renderer
-- [ ] Create `renderer_canvas.ts` with `IRenderer` interface
-- [ ] Implement bar drawing (height = value, width = canvas_width / array_length)
-- [ ] Implement color states:
+- [x] Create `renderer/CanvasRenderer.ts` with `IRenderer` interface
+- [x] Implement bar drawing (height = value, width = canvas_width / array_length)
+- [x] Implement color states:
   - Default (neutral)
   - Comparing (highlight)
   - Swapping (accent)
   - Sorted (success)
-- [ ] Handle range visualization (optional dimming/highlighting of subarrays)
+- [x] Handle range visualization (optional dimming/highlighting of subarrays)
 
 ### 3.2 Animation Controller
-- [ ] Create `controller.ts` with `requestAnimationFrame` loop
-- [ ] Implement playback controls:
+- [x] Create `controller/AnimationController.ts` with `requestAnimationFrame` loop
+- [x] Implement playback controls:
   - Play / Pause
   - Step forward
-  - Speed control (events per frame)
-- [ ] Maintain local array state synchronized with events
-- [ ] Connect controller to renderer
+  - Speed control
+- [x] Maintain local array state synchronized with events
+- [x] Connect controller to renderer
 
 ### 3.3 Basic UI (React Components)
-- [ ] Create React components:
+- [x] Create React components:
   - `<App />` - main container
   - `<Canvas />` - canvas element with ref
   - `<Controls />` - playback controls (play/pause, step, speed slider)
   - `<Settings />` - algorithm selector, array size input, generate button, reset
-- [ ] Wire React state to controller
-- [ ] Use React hooks for animation lifecycle management
+- [x] Wire React state to controller
+- [x] Use React hooks for animation lifecycle management
 
 ---
 
 ## Phase 4: Time Travel (V1)
 
 ### 4.1 Forward/Backward Playback
-- [ ] Implement circular buffer in TypeScript for recent events
-- [ ] Implement inverse event application:
+- [ ] Implement circular buffer in TypeScript for recent events (defer)
+- [x] Implement inverse event application:
   - `Swap(a, b)` → `Swap(a, b)` (self-inverse)
   - `Overwrite { idx, old_val, new_val }` → `Overwrite { idx, new_val, old_val }`
-- [ ] Add step backward control
-- [ ] Add timeline scrubber/slider for random seek (V1 has full history)
+- [x] Add step backward control
+- [x] Add timeline scrubber/slider for random seek (V1 has full history)
 
 ---
 
@@ -120,17 +122,23 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 6: Engine Abstraction & Switching
 
 ### 6.1 Unified Engine Interface
-- [ ] Define `ISortEngine` interface in TypeScript:
+- [x] Define `ISortEngine` interface in TypeScript:
   ```typescript
   interface ISortEngine {
-      initialize(algorithm: string, array: number[]): void;
+      readonly name: string;
+      readonly canSeek: boolean;
+      initialize(algorithm: string, array: number[]): Promise<void>;
       getNextEvents(count: number): SortEvent[];
-      canSeek(): boolean;
-      seek(eventIndex: number): void;
-      rewind(count: number): SortEvent[]; // returns inverse events
+      getAllEvents(): SortEvent[];
+      getEventAt(index: number): SortEvent | null;
+      getTotalEvents(): number;
+      getCurrentPosition(): number;
+      seek(position: number): void;
+      reset(): void;
+      isDone(): boolean;
   }
   ```
-- [ ] Update controller to use `ISortEngine` abstraction
+- [x] Update controller to use `ISortEngine` abstraction
 - [ ] Add explicit UI toggle for V1 (Pregen) / V2 (Live) mode selection
 
 ---

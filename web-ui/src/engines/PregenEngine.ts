@@ -1,5 +1,5 @@
 import type { SortEvent } from '@/types/events';
-import type { ISortEngine, PregenResult } from '@/engines/types';
+import type { ISortEngine } from '@/engines/types';
 
 // Wasm module - will be initialized lazily
 let wasmModule: typeof import('sort-forge-core') | null = null;
@@ -44,7 +44,6 @@ export class PregenEngine implements ISortEngine {
   readonly canSeek = true;
 
   private events: SortEvent[] = [];
-  private sortedArray: number[] = [];
   private position = 0;
   private initialized = false;
 
@@ -56,10 +55,9 @@ export class PregenEngine implements ISortEngine {
     }
 
     // Run the full sort and get all events
-    const result = wasmModule.pregen_sort_with_result(algorithm, array) as PregenResult;
+    const events = wasmModule.pregen_sort(algorithm, array);
 
-    this.events = result.events;
-    this.sortedArray = result.sorted_array;
+    this.events = events;
     this.position = 0;
     this.initialized = true;
   }
@@ -101,10 +99,5 @@ export class PregenEngine implements ISortEngine {
 
   isDone(): boolean {
     return this.position >= this.events.length;
-  }
-
-  /** Get the final sorted array */
-  getSortedArray(): number[] {
-    return this.sortedArray;
   }
 }

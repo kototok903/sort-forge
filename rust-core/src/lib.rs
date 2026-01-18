@@ -65,6 +65,9 @@ struct PregenResult {
 /// Get list of available algorithms.
 #[wasm_bindgen]
 pub fn get_available_algorithms() -> JsValue {
-    let algorithms = vec!["bubble", "quicksort"];
+    let algorithms = Algorithm::all()
+        .iter()
+        .map(Algorithm::as_str)
+        .collect::<Vec<_>>();
     serde_wasm_bindgen::to_value(&algorithms).unwrap()
 }

@@ -2,6 +2,12 @@ import type { SortEvent } from '@/types/events';
 import type { ISortEngine } from '@/engines/types';
 import type { RenderState, BarState, IRenderer } from '@/renderer/types';
 import { inverseEvent } from '@/types/events';
+import {
+  BASE_EVENTS_PER_SECOND,
+  SPEED_DEFAULT,
+  SPEED_MAX,
+  SPEED_MIN,
+} from '@/config';
 
 export type PlaybackState = 'idle' | 'playing' | 'paused' | 'done';
 
@@ -32,8 +38,7 @@ export class AnimationController {
   private playbackState: PlaybackState = 'idle';
   private currentStep = 0;
   private totalSteps = 0;
-  private speed = 1; // events per frame
-  private eventsPerSecond = 60;
+  private speed = SPEED_DEFAULT;
 
   // Animation
   private animationId: number | null = null;
@@ -64,23 +69,14 @@ export class AnimationController {
 
     this.engine = engine;
     this.initialArray = [...array];
-    this.array = [...array];
-    if (array.length > 0) {
-      this.minValue = Math.min(...array);
-      this.maxValue = Math.max(...array);
-    } else {
-      this.minValue = 0;
-      this.maxValue = 1;
-    }
+    this.resetArrayState(array);
+    this.updateMinMax(array);
 
     await engine.initialize(algorithm, array);
 
     this.totalSteps = engine.getTotalEvents();
     this.currentStep = 0;
     this.playbackState = 'idle';
-    this.barStates = new Array(array.length).fill('default');
-    this.activeRange = null;
-    this.rangeStack = [];
 
     this.notifyListeners();
     this.render();
@@ -117,11 +113,8 @@ export class AnimationController {
 
   /** Reset to initial state */
   reset(): void {
-    this.array = [...this.initialArray];
+    this.resetArrayState(this.initialArray);
     this.currentStep = 0;
-    this.barStates = new Array(this.array.length).fill('default');
-    this.activeRange = null;
-    this.rangeStack = [];
     this.engine?.reset();
 
     if (this.playbackState === 'done') {
@@ -182,11 +175,7 @@ export class AnimationController {
 
     const targetStep = Math.max(0, Math.min(step, this.totalSteps));
 
-    // Reset and replay to target
-    this.array = [...this.initialArray];
-    this.barStates = new Array(this.array.length).fill('default');
-    this.activeRange = null;
-    this.rangeStack = [];
+    this.resetArrayState(this.initialArray);
 
     for (let i = 0; i < targetStep; i++) {
       const event = this.engine.getEventAt(i);
@@ -219,9 +208,9 @@ export class AnimationController {
     this.render();
   }
 
-  /** Set playback speed (events per frame at 60fps) */
+  /** Set playback speed */
   setSpeed(speed: number): void {
-    this.speed = Math.max(0.1, Math.min(100, speed));
+    this.speed = Math.max(SPEED_MIN, Math.min(SPEED_MAX, speed));
     this.notifyListeners();
   }
 
@@ -253,8 +242,7 @@ export class AnimationController {
       const deltaTime = time - this.lastFrameTime;
       this.lastFrameTime = time;
 
-      // Calculate how many events to process based on speed and time
-      const msPerEvent = 1000 / (this.eventsPerSecond * this.speed);
+      const msPerEvent = 1000 / (BASE_EVENTS_PER_SECOND * this.speed);
       this.accumulatedTime += deltaTime;
 
       const eventsToProcess = Math.floor(this.accumulatedTime / msPerEvent);
@@ -373,6 +361,23 @@ export class AnimationController {
     };
 
     this.renderer.render(state);
+  }
+
+  private resetArrayState(array: number[]): void {
+    this.array = [...array];
+    this.barStates = new Array(this.array.length).fill('default');
+    this.activeRange = null;
+    this.rangeStack = [];
+  }
+
+  private updateMinMax(array: number[]): void {
+    if (array.length > 0) {
+      this.minValue = Math.min(...array);
+      this.maxValue = Math.max(...array);
+    } else {
+      this.minValue = 0;
+      this.maxValue = 1;
+    }
   }
 
   private notifyListeners(): void {

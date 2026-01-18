@@ -1,4 +1,5 @@
 import type { PlaybackState } from '@/controller/AnimationController';
+import { SPEED_MAX, SPEED_MIN, SPEED_STEP } from '@/config';
 
 interface ControlsProps {
   playbackState: PlaybackState;
@@ -38,7 +39,7 @@ export function Controls({
     <div className="flex flex-col gap-4 p-4 bg-gray-800 rounded-lg">
       {/* Timeline scrubber */}
       <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-400 w-20">
+        <span className="text-sm text-gray-400 w-26">
           {currentStep} / {totalSteps}
         </span>
         <input
@@ -72,7 +73,7 @@ export function Controls({
 
         <button
           onClick={isPlaying ? onPause : onPlay}
-          className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium transition-colors"
+          className="px-6 py-2 w-24 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium transition-colors"
         >
           {isPlaying ? 'Pause' : 'Play'}
         </button>
@@ -89,14 +90,14 @@ export function Controls({
 
       {/* Speed control */}
       <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-400 w-20">
+        <span className="text-sm text-gray-400 w-26">
           Speed: {speed.toFixed(1)}x
         </span>
         <input
           type="range"
-          min={0.1}
-          max={10}
-          step={0.1}
+          min={SPEED_MIN}
+          max={SPEED_MAX}
+          step={SPEED_STEP}
           value={speed}
           onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
           className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"

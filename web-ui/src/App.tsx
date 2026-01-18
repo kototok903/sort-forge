@@ -5,10 +5,17 @@ import { Settings } from '@/components/Settings';
 import { CanvasRenderer } from '@/renderer/CanvasRenderer';
 import { AnimationController, type ControllerState } from '@/controller/AnimationController';
 import { PregenEngine, initWasm, getAvailableAlgorithms } from '@/engines/PregenEngine';
+import {
+  ARRAY_SIZE_DEFAULT,
+  RANDOM_VALUE_MAX,
+  RANDOM_VALUE_MIN,
+  SPEED_DEFAULT,
+} from '@/config';
 
 /** Generate a random array of the given size */
 function generateRandomArray(size: number): number[] {
-  return Array.from({ length: size }, () => Math.floor(Math.random() * 100) + 1);
+  const range = RANDOM_VALUE_MAX - RANDOM_VALUE_MIN + 1;
+  return Array.from({ length: size }, () => Math.floor(Math.random() * range) + RANDOM_VALUE_MIN);
 }
 
 function App() {
@@ -19,14 +26,14 @@ function App() {
   // Settings state
   const [algorithms, setAlgorithms] = useState<string[]>([]);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('');
-  const [arraySize, setArraySize] = useState(50);
+  const [arraySize, setArraySize] = useState(ARRAY_SIZE_DEFAULT);
 
   // Controller state (synced from AnimationController)
   const [controllerState, setControllerState] = useState<ControllerState>({
     playbackState: 'idle',
     currentStep: 0,
     totalSteps: 0,
-    speed: 1,
+    speed: SPEED_DEFAULT,
     array: [],
   });
 

@@ -25,6 +25,18 @@ pub enum Algorithm {
 }
 
 impl Algorithm {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Algorithm::Bubble => "bubble",
+            Algorithm::QuickSort => "quicksort",
+        }
+    }
+
+    pub fn all() -> &'static [Algorithm] {
+        const ALGORITHMS: [Algorithm; 2] = [Algorithm::Bubble, Algorithm::QuickSort];
+        &ALGORITHMS
+    }
+
     /// Parse algorithm name from string.
     pub fn from_str(s: &str) -> Option<Algorithm> {
         match s.to_lowercase().as_str() {

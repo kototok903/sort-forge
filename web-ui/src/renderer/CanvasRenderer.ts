@@ -19,12 +19,18 @@ const BG_COLOR = '#111827'; // gray-900
 const BAR_GAP_RATIO = 0.15;
 const BAR_GAP_MAX = 2;
 
+const BAR_MIN_HEIGHT = 2;
+const BAR_HEIGHT_PADDING = 20;
+const BAR_HEIGHT_BASE = 10;
+
 /**
  * Canvas-based renderer for sort visualization.
  */
 export class CanvasRenderer implements IRenderer {
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
+  private width = 0;
+  private height = 0;
 
   setCanvas(canvas: HTMLCanvasElement): void {
     this.canvas = canvas;
@@ -41,28 +47,28 @@ export class CanvasRenderer implements IRenderer {
     this.canvas.width = Math.floor(rect.width * dpr);
     this.canvas.height = Math.floor(rect.height * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.width = rect.width;
+    this.height = rect.height;
   }
 
   clear(): void {
     if (!this.canvas || !this.ctx) return;
 
-    const rect = this.canvas.getBoundingClientRect();
     this.ctx.fillStyle = BG_COLOR;
-    this.ctx.fillRect(0, 0, rect.width, rect.height);
+    this.ctx.fillRect(0, 0, this.width, this.height);
   }
 
   render(state: RenderState): void {
     if (!this.canvas || !this.ctx) return;
 
     const { array, barStates, activeRange, minValue, maxValue } = state;
-    const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
+    const width = this.width;
+    const height = this.height;
 
     // Clear canvas
     this.clear();
 
-    if (array.length === 0) return;
+    if (array.length === 0 || width === 0 || height === 0) return;
 
     // Calculate bar dimensions
     const barCount = array.length;
@@ -84,7 +90,10 @@ export class CanvasRenderer implements IRenderer {
 
       // Calculate bar height (normalize to canvas height with some padding)
       const normalizedValue = (value - minValue) / valueRange;
-      const barHeight = Math.max(2, normalizedValue * (height - 20) + 10);
+      const barHeight = Math.max(
+        BAR_MIN_HEIGHT,
+        normalizedValue * (height - BAR_HEIGHT_PADDING) + BAR_HEIGHT_BASE,
+      );
 
       // Calculate bar position
       const x = i * (barWidth + gap);
