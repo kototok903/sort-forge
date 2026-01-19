@@ -1,27 +1,37 @@
 import type { IRenderer, RenderState, BarState } from '@/renderer/types';
 
-/** Color palette for bar states */
-const COLORS: Record<BarState, string> = {
-  default: '#6366f1',   // indigo
-  comparing: '#facc15', // yellow
-  swapping: '#f97316',  // orange
-  writing: '#22c55e',   // green
-  sorted: '#8b5cf6',    // purple
+/** Bar state colors (fill, border) */
+const COLORS: Record<BarState, [string, string]> = {
+  default: ['#6366f1', '#4f46e5'],   // indigo
+  comparing: ['#facc15', '#eab308'], // yellow
+  swapping: ['#f97316', '#ea580c'],  // orange
+  writing: ['#22c55e', '#16a34a'],   // green
+  sorted: ['#8b5cf6', '#7c3aed'],    // purple
 };
-
-/** Color for bars outside the active range (dimmed) */
-const DIMMED_COLOR = '#374151'; // gray-700
 
 /** Background color */
 const BG_COLOR = '#111827'; // gray-900
 
+/** Padding */
+const PADDING_TOP = 10;
+const PADDING_BOTTOM = 10;
+const PADDING_LEFT = 0;
+const PADDING_RIGHT = 0;
+
 /** Gap sizing for bars */
+const BAR_BORDER_WIDTH = 1;
+
+const BAR_GAP_ENABLED = true;
 const BAR_GAP_RATIO = 0.15;
 const BAR_GAP_MAX = 2;
 
-const BAR_MIN_HEIGHT = 2;
-const BAR_HEIGHT_PADDING = 20;
-const BAR_HEIGHT_BASE = 10;
+const BAR_BASE_HEIGHT_RATIO = 0.05;
+const BAR_BASE_HEIGHT_MIN = 2;
+const BAR_BASE_HEIGHT_MAX = 10;
+
+const ACTIVE_RANGE_COLOR = '#22d3ee';
+const ACTIVE_RANGE_LINE_HEIGHT = 3;
+const ACTIVE_RANGE_LINE_GAP = 4;
 
 /**
  * Canvas-based renderer for sort visualization.
@@ -72,45 +82,44 @@ export class CanvasRenderer implements IRenderer {
 
     // Calculate bar dimensions
     const barCount = array.length;
-    const rawBarWidth = width / barCount;
-    let gap = barCount > 1 ? Math.min(BAR_GAP_MAX, rawBarWidth * BAR_GAP_RATIO) : 0;
-    let totalGapWidth = gap * (barCount - 1);
-    let barWidth = (width - totalGapWidth) / barCount;
-    if (barWidth <= 0) {
-      gap = 0;
-      totalGapWidth = 0;
-      barWidth = width / barCount;
-    }
-    const valueRange = maxValue - minValue || 1;
+    const gap = BAR_GAP_ENABLED ? Math.min(BAR_GAP_MAX, width / barCount * BAR_GAP_RATIO) : 0;
+    const barWidth = (width - gap * (barCount - 1) - PADDING_LEFT - PADDING_RIGHT) / barCount;
+    const valueRange = maxValue - minValue || 1; // Prevent division by zero
+    const maxBarHeight = Math.max(0, height - ACTIVE_RANGE_LINE_HEIGHT - ACTIVE_RANGE_LINE_GAP - PADDING_TOP - PADDING_BOTTOM);
+    const barBaseHeight = Math.max(BAR_BASE_HEIGHT_MIN, Math.min(BAR_BASE_HEIGHT_MAX, maxBarHeight * BAR_BASE_HEIGHT_RATIO));
+    if (maxBarHeight < barBaseHeight) return;
 
-    // Draw each bar
+    // Draw bars
     for (let i = 0; i < array.length; i++) {
       const value = array[i];
       const barState = barStates[i] || 'default';
 
-      // Calculate bar height (normalize to canvas height with some padding)
+      // Calculate bar height
       const normalizedValue = (value - minValue) / valueRange;
-      const barHeight = Math.max(
-        BAR_MIN_HEIGHT,
-        normalizedValue * (height - BAR_HEIGHT_PADDING) + BAR_HEIGHT_BASE,
-      );
+      const barHeight = barBaseHeight + normalizedValue * (maxBarHeight - barBaseHeight);
 
       // Calculate bar position
-      const x = i * (barWidth + gap);
-      const y = height - barHeight;
+      const x = PADDING_LEFT + i * (barWidth + gap);
+      const y = PADDING_TOP + maxBarHeight - barHeight;
 
-      // Determine color based on state and range
-      let color: string;
-      if (activeRange && (i < activeRange.lo || i > activeRange.hi)) {
-        // Outside active range - dim the bar
-        color = DIMMED_COLOR;
-      } else {
-        color = COLORS[barState];
-      }
-
-      // Draw the bar
-      this.ctx.fillStyle = color;
+      // Fill bar
+      this.ctx.fillStyle = COLORS[barState][0];
       this.ctx.fillRect(x, y, barWidth, barHeight);
+
+      // Draw bar border
+      this.ctx.strokeStyle = COLORS[barState][1];
+      this.ctx.lineWidth = BAR_BORDER_WIDTH;
+      this.ctx.strokeRect(x, y, barWidth, barHeight);
+    }
+
+    // Draw active range line
+    if (activeRange) {
+      const lineX = PADDING_LEFT + activeRange.lo * (barWidth + gap);
+      const lineWidth = (activeRange.hi - activeRange.lo + 1) * barWidth + (activeRange.hi - activeRange.lo) * gap;
+      const lineY = height - PADDING_BOTTOM - ACTIVE_RANGE_LINE_HEIGHT;
+
+      this.ctx.fillStyle = ACTIVE_RANGE_COLOR;
+      this.ctx.fillRect(lineX, lineY, lineWidth, ACTIVE_RANGE_LINE_HEIGHT);
     }
   }
 }
