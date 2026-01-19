@@ -7,15 +7,32 @@ import { AnimationController, type ControllerState } from '@/controller/Animatio
 import { PregenEngine, initWasm, getAvailableAlgorithms } from '@/engines/PregenEngine';
 import {
   ARRAY_SIZE_DEFAULT,
+  DISTRIBUTION_DEFAULT,
+  type Distribution,
   RANDOM_VALUE_MAX,
   RANDOM_VALUE_MIN,
   SPEED_DEFAULT,
 } from '@/config';
 
-/** Generate a random array of the given size */
-function generateRandomArray(size: number): number[] {
-  const range = RANDOM_VALUE_MAX - RANDOM_VALUE_MIN + 1;
-  return Array.from({ length: size }, () => Math.floor(Math.random() * range) + RANDOM_VALUE_MIN);
+function generateArray(size: number, distribution: Distribution): number[] {
+  switch (distribution) {
+    case 'uniform': {
+      const array = Array.from({ length: size }, (_, index) => index + 1);
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+    case 'random':
+    default: {
+      const range = RANDOM_VALUE_MAX - RANDOM_VALUE_MIN + 1;
+      return Array.from(
+        { length: size },
+        () => Math.floor(Math.random() * range) + RANDOM_VALUE_MIN,
+      );
+    }
+  }
 }
 
 function App() {
@@ -27,6 +44,7 @@ function App() {
   const [algorithms, setAlgorithms] = useState<string[]>([]);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState('');
   const [arraySize, setArraySize] = useState(ARRAY_SIZE_DEFAULT);
+  const [distribution, setDistribution] = useState<Distribution>(DISTRIBUTION_DEFAULT);
 
   // Controller state (synced from AnimationController)
   const [controllerState, setControllerState] = useState<ControllerState>({
@@ -77,7 +95,7 @@ function App() {
 
     setIsGenerating(true);
     try {
-      const array = generateRandomArray(arraySize);
+      const array = generateArray(arraySize, distribution);
       const engine = new PregenEngine();
       await controller.initialize(engine, selectedAlgorithm, array);
     } catch (err) {
@@ -85,7 +103,7 @@ function App() {
     } finally {
       setIsGenerating(false);
     }
-  }, [wasmReady, isGenerating, arraySize, selectedAlgorithm, controller]);
+  }, [wasmReady, isGenerating, arraySize, selectedAlgorithm, controller, distribution]);
 
   // Playback handlers
   const handlePlay = useCallback(() => controller.play(), [controller]);
@@ -146,8 +164,10 @@ function App() {
           <Settings
             algorithms={algorithms}
             selectedAlgorithm={selectedAlgorithm}
+            distribution={distribution}
             arraySize={arraySize}
             onAlgorithmChange={setSelectedAlgorithm}
+            onDistributionChange={setDistribution}
             onArraySizeChange={setArraySize}
             onGenerate={handleGenerate}
             disabled={isGenerating}

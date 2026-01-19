@@ -1,10 +1,13 @@
+import type { Distribution } from '@/config';
 import { ARRAY_SIZE_MAX, ARRAY_SIZE_MIN } from '@/config';
 
 interface SettingsProps {
   algorithms: string[];
   selectedAlgorithm: string;
+  distribution: Distribution;
   arraySize: number;
   onAlgorithmChange: (algorithm: string) => void;
+  onDistributionChange: (distribution: Distribution) => void;
   onArraySizeChange: (size: number) => void;
   onGenerate: () => void;
   disabled?: boolean;
@@ -16,8 +19,10 @@ interface SettingsProps {
 export function Settings({
   algorithms,
   selectedAlgorithm,
+  distribution,
   arraySize,
   onAlgorithmChange,
+  onDistributionChange,
   onArraySizeChange,
   onGenerate,
   disabled = false,
@@ -38,6 +43,19 @@ export function Settings({
               {formatAlgorithmName(algo)}
             </option>
           ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm text-gray-400">Distribution</label>
+        <select
+          value={distribution}
+          onChange={(e) => onDistributionChange(e.target.value as Distribution)}
+          disabled={disabled}
+          className="px-3 py-2 bg-gray-700 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <option value="random">Random</option>
+          <option value="uniform">Uniform</option>
         </select>
       </div>
 

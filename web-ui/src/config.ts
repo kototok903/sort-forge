@@ -2,6 +2,9 @@ export const ARRAY_SIZE_DEFAULT = 50;
 export const ARRAY_SIZE_MIN = 5;
 export const ARRAY_SIZE_MAX = 200;
 
+export type Distribution = 'random' | 'uniform';
+export const DISTRIBUTION_DEFAULT: Distribution = 'random';
+
 export const RANDOM_VALUE_MIN = 1;
 export const RANDOM_VALUE_MAX = 100;
 
