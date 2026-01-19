@@ -39,8 +39,10 @@ export function Controls({
     <div className="flex flex-col gap-4 p-4 bg-gray-800 rounded-lg">
       {/* Timeline scrubber */}
       <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-400 w-26">
-          {currentStep} / {totalSteps}
+        <span className="flex items-center justify-between text-sm text-gray-400 w-26">
+          <span className="flex-1 font-semibold">{currentStep}</span>
+          <span>/</span>
+          <span className="flex-1 text-right">{totalSteps}</span>
         </span>
         <input
           type="range"
@@ -90,8 +92,9 @@ export function Controls({
 
       {/* Speed control */}
       <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-400 w-26">
-          Speed: {speed.toFixed(1)}x
+        <span className="flex items-center justify-between text-sm text-gray-400 w-26">
+          <span>Speed:</span>
+          <span className="font-semibold">{speed.toFixed(1)}x</span>
         </span>
         <input
           type="range"

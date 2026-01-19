@@ -139,7 +139,7 @@ function App() {
         {/* Visualization area */}
         <div className="flex-1 flex flex-col gap-4">
           {/* Canvas */}
-          <div className="flex-1 bg-gray-800 rounded-lg overflow-hidden min-h-[300px]">
+          <div className="flex-1 bg-gray-900 overflow-hidden min-h-[300px]">
             <Canvas renderer={renderer} />
           </div>
 

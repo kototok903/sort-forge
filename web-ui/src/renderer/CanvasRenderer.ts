@@ -13,8 +13,8 @@ const COLORS: Record<BarState, [string, string]> = {
 const BG_COLOR = '#111827'; // gray-900
 
 /** Padding */
-const PADDING_TOP = 10;
-const PADDING_BOTTOM = 10;
+const PADDING_TOP = 0;
+const PADDING_BOTTOM = 0;
 const PADDING_LEFT = 0;
 const PADDING_RIGHT = 0;
 
