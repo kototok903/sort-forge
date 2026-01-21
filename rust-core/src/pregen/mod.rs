@@ -5,16 +5,24 @@
 //! timeline scrubbing, but uses O(N²) memory for events.
 
 pub mod binary_insertion_sort;
+pub mod bitonic_sort;
 pub mod bubble_sort;
 pub mod cocktail_sort;
 pub mod comb_sort;
+pub mod cycle_sort;
 pub mod gnome_sort;
+pub mod heap_sort;
 pub mod insertion_sort;
+pub mod intro_sort;
+pub mod merge_sort;
 pub mod odd_even_sort;
 pub mod pancake_sort;
 pub mod quicksort;
+pub mod radix_lsd_sort;
+pub mod radix_msd_sort;
 pub mod selection_sort;
 pub mod shell_sort;
+pub mod tim_sort;
 
 use crate::events::SortEvent;
 
@@ -39,7 +47,15 @@ pub enum Algorithm {
     Pancake,
     Shell,
     Comb,
+    Cycle,
     QuickSort,
+    MergeSort,
+    HeapSort,
+    TimSort,
+    IntroSort,
+    RadixLsd,
+    RadixMsd,
+    Bitonic,
 }
 
 impl Algorithm {
@@ -55,12 +71,20 @@ impl Algorithm {
             Algorithm::Pancake => "pancake",
             Algorithm::Shell => "shell",
             Algorithm::Comb => "comb",
+            Algorithm::Cycle => "cycle",
             Algorithm::QuickSort => "quicksort",
+            Algorithm::MergeSort => "merge",
+            Algorithm::HeapSort => "heap",
+            Algorithm::TimSort => "tim",
+            Algorithm::IntroSort => "intro",
+            Algorithm::RadixLsd => "radix_lsd",
+            Algorithm::RadixMsd => "radix_msd",
+            Algorithm::Bitonic => "bitonic",
         }
     }
 
     pub fn all() -> &'static [Algorithm] {
-        const ALGORITHMS: [Algorithm; 11] = [
+        const ALGORITHMS: [Algorithm; 19] = [
             Algorithm::Bubble,
             Algorithm::Selection,
             Algorithm::Insertion,
@@ -71,7 +95,15 @@ impl Algorithm {
             Algorithm::Pancake,
             Algorithm::Shell,
             Algorithm::Comb,
+            Algorithm::Cycle,
             Algorithm::QuickSort,
+            Algorithm::MergeSort,
+            Algorithm::HeapSort,
+            Algorithm::TimSort,
+            Algorithm::IntroSort,
+            Algorithm::RadixLsd,
+            Algorithm::RadixMsd,
+            Algorithm::Bitonic,
         ];
         &ALGORITHMS
     }
@@ -89,7 +121,15 @@ impl Algorithm {
             "pancake" | "pancakesort" | "pancake_sort" => Some(Algorithm::Pancake),
             "shell" | "shellsort" | "shell_sort" => Some(Algorithm::Shell),
             "comb" | "combsort" | "comb_sort" => Some(Algorithm::Comb),
+            "cycle" | "cyclesort" | "cycle_sort" => Some(Algorithm::Cycle),
             "quick" | "quicksort" | "quick_sort" => Some(Algorithm::QuickSort),
+            "merge" | "mergesort" | "merge_sort" => Some(Algorithm::MergeSort),
+            "heap" | "heapsort" | "heap_sort" => Some(Algorithm::HeapSort),
+            "tim" | "timsort" | "tim_sort" => Some(Algorithm::TimSort),
+            "intro" | "introsort" | "intro_sort" => Some(Algorithm::IntroSort),
+            "radix_lsd" | "radixlsd" | "radix_lsd_sort" => Some(Algorithm::RadixLsd),
+            "radix_msd" | "radixmsd" | "radix_msd_sort" => Some(Algorithm::RadixMsd),
+            "bitonic" | "bitonicsort" | "bitonic_sort" => Some(Algorithm::Bitonic),
             _ => None,
         }
     }
@@ -109,6 +149,14 @@ pub fn pregen_sort(algorithm: Algorithm, array: &mut [i32]) -> Vec<SortEvent> {
         Algorithm::Pancake => pancake_sort::PancakeSort::sort(array),
         Algorithm::Shell => shell_sort::ShellSort::sort(array),
         Algorithm::Comb => comb_sort::CombSort::sort(array),
+        Algorithm::Cycle => cycle_sort::CycleSort::sort(array),
         Algorithm::QuickSort => quicksort::QuickSort::sort(array),
+        Algorithm::MergeSort => merge_sort::MergeSort::sort(array),
+        Algorithm::HeapSort => heap_sort::HeapSort::sort(array),
+        Algorithm::TimSort => tim_sort::TimSort::sort(array),
+        Algorithm::IntroSort => intro_sort::IntroSort::sort(array),
+        Algorithm::RadixLsd => radix_lsd_sort::RadixLsdSort::sort(array),
+        Algorithm::RadixMsd => radix_msd_sort::RadixMsdSort::sort(array),
+        Algorithm::Bitonic => bitonic_sort::BitonicSort::sort(array),
     }
 }
