@@ -90,8 +90,8 @@ export function Settings({
 const SPECIAL_ALGORITHM_NAMES: Record<string, string> = {
   "quicksort_ll": "Quicksort (LL)",
   "quicksort_lr": "Quicksort (LR)",
-  "radix_lsd_sort": "Radix LSD Sort",
-  "radix_msd_sort": "Radix MSD Sort",
+  "radix_lsd": "Radix LSD Sort",
+  "radix_msd": "Radix MSD Sort",
 };
 
 /** Format algorithm name for display (e.g., "bubble_sort" -> "Bubble Sort").
