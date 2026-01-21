@@ -87,10 +87,16 @@ export function Settings({
   );
 }
 
-/** Format algorithm name for display (e.g., "bubble_sort" -> "Bubble Sort") */
+/** Format algorithm name for display (e.g., "bubble_sort" -> "Bubble Sort").
+ */
 function formatAlgorithmName(name: string): string {
-  return name
+  const formatted = name
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+
+  if (!formatted.toLowerCase().endsWith('sort')) {
+    return formatted + ' Sort';
+  }
+  return formatted;
 }

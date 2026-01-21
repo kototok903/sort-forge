@@ -89,6 +89,17 @@ function App() {
     return unsubscribe;
   }, [controller]);
 
+  // Auto-generate on initial load
+  const [hasInitialized, setHasInitialized] = useState(false);
+  useEffect(() => {
+    if (wasmReady && selectedAlgorithm && !hasInitialized) {
+      setHasInitialized(true);
+      const array = generateArray(arraySize, distribution);
+      const engine = new PregenEngine();
+      controller.initialize(engine, selectedAlgorithm, array);
+    }
+  }, [wasmReady, selectedAlgorithm, hasInitialized, arraySize, distribution, controller]);
+
   // Generate and start sort
   const handleGenerate = useCallback(async () => {
     if (!wasmReady || isGenerating) return;
