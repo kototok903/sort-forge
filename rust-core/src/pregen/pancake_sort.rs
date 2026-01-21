@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn test_pancake_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = PancakeSort::sort(&mut array);
+        PancakeSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test_pancake_sort_two_elements() {
         let mut array = vec![2, 1];
-        let events = PancakeSort::sort(&mut array);
+        PancakeSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2]);
     }

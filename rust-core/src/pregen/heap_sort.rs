@@ -100,7 +100,7 @@ mod tests {
     #[test]
     fn test_heap_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = HeapSort::sort(&mut array);
+        HeapSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn test_heap_sort_large() {
         let mut array = vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
-        let events = HeapSort::sort(&mut array);
+        HeapSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }

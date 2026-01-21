@@ -17,12 +17,13 @@ pub mod intro_sort;
 pub mod merge_sort;
 pub mod odd_even_sort;
 pub mod pancake_sort;
-pub mod quicksort;
+pub mod quicksort_ll;
+pub mod quicksort_lr;
 pub mod radix_lsd_sort;
 pub mod radix_msd_sort;
 pub mod selection_sort;
 pub mod shell_sort;
-pub mod tim_sort;
+pub mod timsort;
 
 use crate::events::SortEvent;
 
@@ -48,10 +49,11 @@ pub enum Algorithm {
     Shell,
     Comb,
     Cycle,
-    QuickSort,
+    QuickSortLL,
+    QuickSortLR,
     MergeSort,
     HeapSort,
-    TimSort,
+    Timsort,
     IntroSort,
     RadixLsd,
     RadixMsd,
@@ -72,10 +74,11 @@ impl Algorithm {
             Algorithm::Shell => "shell",
             Algorithm::Comb => "comb",
             Algorithm::Cycle => "cycle",
-            Algorithm::QuickSort => "quicksort",
+            Algorithm::QuickSortLL => "quicksort_ll",
+            Algorithm::QuickSortLR => "quicksort_lr",
             Algorithm::MergeSort => "merge",
             Algorithm::HeapSort => "heap",
-            Algorithm::TimSort => "tim",
+            Algorithm::Timsort => "timsort",
             Algorithm::IntroSort => "intro",
             Algorithm::RadixLsd => "radix_lsd",
             Algorithm::RadixMsd => "radix_msd",
@@ -84,7 +87,7 @@ impl Algorithm {
     }
 
     pub fn all() -> &'static [Algorithm] {
-        const ALGORITHMS: [Algorithm; 19] = [
+        const ALGORITHMS: [Algorithm; 20] = [
             Algorithm::Bubble,
             Algorithm::Selection,
             Algorithm::Insertion,
@@ -96,10 +99,11 @@ impl Algorithm {
             Algorithm::Shell,
             Algorithm::Comb,
             Algorithm::Cycle,
-            Algorithm::QuickSort,
+            Algorithm::QuickSortLL,
+            Algorithm::QuickSortLR,
             Algorithm::MergeSort,
             Algorithm::HeapSort,
-            Algorithm::TimSort,
+            Algorithm::Timsort,
             Algorithm::IntroSort,
             Algorithm::RadixLsd,
             Algorithm::RadixMsd,
@@ -114,7 +118,9 @@ impl Algorithm {
             "bubble" | "bubblesort" | "bubble_sort" => Some(Algorithm::Bubble),
             "selection" | "selectionsort" | "selection_sort" => Some(Algorithm::Selection),
             "insertion" | "insertionsort" | "insertion_sort" => Some(Algorithm::Insertion),
-            "binary_insertion" | "binaryinsertion" | "binary_insertion_sort" => Some(Algorithm::BinaryInsertion),
+            "binary_insertion" | "binaryinsertion" | "binary_insertion_sort" => {
+                Some(Algorithm::BinaryInsertion)
+            }
             "cocktail" | "cocktailsort" | "cocktail_sort" => Some(Algorithm::Cocktail),
             "odd_even" | "oddeven" | "odd_even_sort" => Some(Algorithm::OddEven),
             "gnome" | "gnomesort" | "gnome_sort" => Some(Algorithm::Gnome),
@@ -122,10 +128,11 @@ impl Algorithm {
             "shell" | "shellsort" | "shell_sort" => Some(Algorithm::Shell),
             "comb" | "combsort" | "comb_sort" => Some(Algorithm::Comb),
             "cycle" | "cyclesort" | "cycle_sort" => Some(Algorithm::Cycle),
-            "quick" | "quicksort" | "quick_sort" => Some(Algorithm::QuickSort),
+            "quicksort_ll" | "quicksortll" | "quick_sort_ll" => Some(Algorithm::QuickSortLL),
+            "quicksort_lr" | "quicksortlr" | "quick_sort_lr" => Some(Algorithm::QuickSortLR),
             "merge" | "mergesort" | "merge_sort" => Some(Algorithm::MergeSort),
             "heap" | "heapsort" | "heap_sort" => Some(Algorithm::HeapSort),
-            "tim" | "timsort" | "tim_sort" => Some(Algorithm::TimSort),
+            "tim" | "timsort" | "tim_sort" => Some(Algorithm::Timsort),
             "intro" | "introsort" | "intro_sort" => Some(Algorithm::IntroSort),
             "radix_lsd" | "radixlsd" | "radix_lsd_sort" => Some(Algorithm::RadixLsd),
             "radix_msd" | "radixmsd" | "radix_msd_sort" => Some(Algorithm::RadixMsd),
@@ -150,10 +157,11 @@ pub fn pregen_sort(algorithm: Algorithm, array: &mut [i32]) -> Vec<SortEvent> {
         Algorithm::Shell => shell_sort::ShellSort::sort(array),
         Algorithm::Comb => comb_sort::CombSort::sort(array),
         Algorithm::Cycle => cycle_sort::CycleSort::sort(array),
-        Algorithm::QuickSort => quicksort::QuickSort::sort(array),
+        Algorithm::QuickSortLL => quicksort_ll::QuickSortLL::sort(array),
+        Algorithm::QuickSortLR => quicksort_lr::QuickSortLR::sort(array),
         Algorithm::MergeSort => merge_sort::MergeSort::sort(array),
         Algorithm::HeapSort => heap_sort::HeapSort::sort(array),
-        Algorithm::TimSort => tim_sort::TimSort::sort(array),
+        Algorithm::Timsort => timsort::Timsort::sort(array),
         Algorithm::IntroSort => intro_sort::IntroSort::sort(array),
         Algorithm::RadixLsd => radix_lsd_sort::RadixLsdSort::sort(array),
         Algorithm::RadixMsd => radix_msd_sort::RadixMsdSort::sort(array),

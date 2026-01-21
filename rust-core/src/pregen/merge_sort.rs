@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn test_merge_sort_already_sorted() {
         let mut array = vec![1, 2, 3, 4, 5];
-        let events = MergeSort::sort(&mut array);
+        MergeSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_merge_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = MergeSort::sort(&mut array);
+        MergeSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }

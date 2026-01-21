@@ -1,14 +1,15 @@
-//! QuickSort implementation for V1 (Pregeneration) engine.
+//! QuickSort (Left-Left pointers) implementation for V1 (Pregeneration) engine.
 //!
 //! Uses Lomuto partition scheme with rightmost pivot.
+//! Single pointer moves left-to-right, swapping elements smaller than pivot.
 //! Emits EnterRange/ExitRange events to visualize recursive subarrays.
 
 use crate::events::SortEvent;
 use super::PregenSort;
 
-pub struct QuickSort;
+pub struct QuickSortLL;
 
-impl PregenSort for QuickSort {
+impl PregenSort for QuickSortLL {
     fn sort(array: &mut [i32]) -> Vec<SortEvent> {
         let mut events = Vec::new();
         let n = array.len();
@@ -79,62 +80,62 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_quicksort_basic() {
+    fn test_quicksort_ll_basic() {
         let mut array = vec![5, 3, 8, 4, 2];
-        let events = QuickSort::sort(&mut array);
+        let events = QuickSortLL::sort(&mut array);
 
         assert_eq!(array, vec![2, 3, 4, 5, 8]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));
     }
 
     #[test]
-    fn test_quicksort_already_sorted() {
+    fn test_quicksort_ll_already_sorted() {
         let mut array = vec![1, 2, 3, 4, 5];
-        let events = QuickSort::sort(&mut array);
+        let events = QuickSortLL::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));
     }
 
     #[test]
-    fn test_quicksort_reverse() {
+    fn test_quicksort_ll_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = QuickSort::sort(&mut array);
+        QuickSortLL::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
-    fn test_quicksort_empty() {
+    fn test_quicksort_ll_empty() {
         let mut array: Vec<i32> = vec![];
-        let events = QuickSort::sort(&mut array);
+        let events = QuickSortLL::sort(&mut array);
 
         assert!(array.is_empty());
         assert!(matches!(events.last(), Some(SortEvent::Done)));
     }
 
     #[test]
-    fn test_quicksort_single() {
+    fn test_quicksort_ll_single() {
         let mut array = vec![42];
-        let events = QuickSort::sort(&mut array);
+        let events = QuickSortLL::sort(&mut array);
 
         assert_eq!(array, vec![42]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));
     }
 
     #[test]
-    fn test_quicksort_duplicates() {
+    fn test_quicksort_ll_duplicates() {
         let mut array = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
-        let events = QuickSort::sort(&mut array);
+        let events = QuickSortLL::sort(&mut array);
 
         assert_eq!(array, vec![1, 1, 2, 3, 3, 4, 5, 5, 5, 6, 9]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));
     }
 
     #[test]
-    fn test_quicksort_emits_range_events() {
+    fn test_quicksort_ll_emits_range_events() {
         let mut array = vec![3, 1, 2];
-        let events = QuickSort::sort(&mut array);
+        let events = QuickSortLL::sort(&mut array);
 
         let enter_count = events.iter().filter(|e| matches!(e, SortEvent::EnterRange { .. })).count();
         let exit_count = events.iter().filter(|e| matches!(e, SortEvent::ExitRange { .. })).count();

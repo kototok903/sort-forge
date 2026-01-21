@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn test_cocktail_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = CocktailSort::sort(&mut array);
+        CocktailSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -118,7 +118,7 @@ mod tests {
     fn test_cocktail_sort_turtle_case() {
         // "Turtle" case: small value at end that bubble sort handles poorly
         let mut array = vec![2, 3, 4, 5, 1];
-        let events = CocktailSort::sort(&mut array);
+        CocktailSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }

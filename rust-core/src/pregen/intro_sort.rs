@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn test_intro_sort_already_sorted() {
         let mut array = vec![1, 2, 3, 4, 5];
-        let events = IntroSort::sort(&mut array);
+        IntroSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn test_intro_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = IntroSort::sort(&mut array);
+        IntroSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn test_intro_sort_large() {
         let mut array: Vec<i32> = (0..100).rev().collect();
-        let events = IntroSort::sort(&mut array);
+        IntroSort::sort(&mut array);
 
         let expected: Vec<i32> = (0..100).collect();
         assert_eq!(array, expected);
@@ -283,7 +283,7 @@ mod tests {
     #[test]
     fn test_intro_sort_duplicates() {
         let mut array = vec![3, 1, 3, 2, 1];
-        let events = IntroSort::sort(&mut array);
+        IntroSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 1, 2, 3, 3]);
     }

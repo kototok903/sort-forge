@@ -87,9 +87,20 @@ export function Settings({
   );
 }
 
+const SPECIAL_ALGORITHM_NAMES: Record<string, string> = {
+  "quicksort_ll": "Quicksort (LL)",
+  "quicksort_lr": "Quicksort (LR)",
+  "radix_lsd_sort": "Radix LSD Sort",
+  "radix_msd_sort": "Radix MSD Sort",
+};
+
 /** Format algorithm name for display (e.g., "bubble_sort" -> "Bubble Sort").
  */
 function formatAlgorithmName(name: string): string {
+  if (SPECIAL_ALGORITHM_NAMES[name]) {
+    return SPECIAL_ALGORITHM_NAMES[name];
+  }
+
   const formatted = name
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

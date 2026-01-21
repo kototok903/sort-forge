@@ -1,7 +1,7 @@
 //! Insertion Sort implementation for V1 (Pregeneration) engine.
 
-use crate::events::SortEvent;
 use super::PregenSort;
+use crate::events::SortEvent;
 
 pub struct InsertionSort;
 
@@ -73,14 +73,17 @@ mod tests {
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
         // No overwrites needed for already sorted array
-        let overwrite_count = events.iter().filter(|e| matches!(e, SortEvent::Overwrite { .. })).count();
+        let overwrite_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Overwrite { .. }))
+            .count();
         assert_eq!(overwrite_count, 0);
     }
 
     #[test]
     fn test_insertion_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = InsertionSort::sort(&mut array);
+        InsertionSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -109,8 +112,14 @@ mod tests {
         let events = InsertionSort::sort(&mut array);
 
         // Should use Overwrite events, not Swap
-        let swap_count = events.iter().filter(|e| matches!(e, SortEvent::Swap { .. })).count();
-        let overwrite_count = events.iter().filter(|e| matches!(e, SortEvent::Overwrite { .. })).count();
+        let swap_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Swap { .. }))
+            .count();
+        let overwrite_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Overwrite { .. }))
+            .count();
         assert_eq!(swap_count, 0);
         assert!(overwrite_count > 0);
     }

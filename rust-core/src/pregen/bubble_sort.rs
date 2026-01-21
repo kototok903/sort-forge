@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn test_bubble_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = BubbleSort::sort(&mut array);
+        BubbleSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }

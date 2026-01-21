@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn test_shell_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        let events = ShellSort::sort(&mut array);
+        ShellSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
