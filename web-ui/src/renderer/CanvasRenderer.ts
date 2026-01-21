@@ -21,7 +21,7 @@ const PADDING_RIGHT = 0;
 /** Gap sizing for bars */
 const BAR_BORDER_WIDTH = 1;
 
-const BAR_GAP_ENABLED = true;
+const BAR_GAP_ENABLED = false;
 const BAR_GAP_RATIO = 0.15;
 const BAR_GAP_MAX = 2;
 
