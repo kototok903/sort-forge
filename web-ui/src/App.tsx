@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Canvas } from '@/components/Canvas';
 import { Controls } from '@/components/Controls';
-import { Settings } from '@/components/Settings';
+import { Header } from '@/components/Header';
+import { Sidebar } from '@/components/Sidebar';
 import { CanvasRenderer } from '@/renderer/CanvasRenderer';
 import { AnimationController, type ControllerState } from '@/controller/AnimationController';
 import { PregenEngine, initWasm, getAvailableAlgorithms } from '@/engines/PregenEngine';
@@ -39,6 +40,9 @@ function App() {
   // Wasm initialization state
   const [wasmReady, setWasmReady] = useState(false);
   const [wasmError, setWasmError] = useState<string | null>(null);
+
+  // UI state
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Settings state
   const [algorithms, setAlgorithms] = useState<string[]>([]);
@@ -100,6 +104,52 @@ function App() {
     }
   }, [wasmReady, selectedAlgorithm, hasInitialized, arraySize, distribution, controller]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) {
+        return;
+      }
+
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault();
+          if (controllerState.playbackState === 'playing') {
+            controller.pause();
+          } else {
+            controller.play();
+          }
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          controller.stepForward();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          controller.stepBackward();
+          break;
+        case 'KeyR':
+          e.preventDefault();
+          controller.reset();
+          break;
+        case 'Equal':
+        case 'NumpadAdd':
+          e.preventDefault();
+          controller.setSpeed(Math.min(10, controllerState.speed + 0.5));
+          break;
+        case 'Minus':
+        case 'NumpadSubtract':
+          e.preventDefault();
+          controller.setSpeed(Math.max(0.1, controllerState.speed - 0.5));
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [controller, controllerState.playbackState, controllerState.speed]);
+
   // Generate and start sort
   const handleGenerate = useCallback(async () => {
     if (!wasmReady || isGenerating) return;
@@ -125,68 +175,67 @@ function App() {
   const handleSpeedChange = useCallback((speed: number) => controller.setSpeed(speed), [controller]);
   const handleReset = useCallback(() => controller.reset(), [controller]);
 
+  // Toggle sidebar
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarOpen((prev) => !prev);
+  }, []);
+
   // Show loading state
   if (!wasmReady) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center bg-[var(--bg-base)]">
         {wasmError ? (
-          <div className="text-red-400">Error: {wasmError}</div>
+          <div className="text-[var(--error)]">Error: {wasmError}</div>
         ) : (
-          <div className="text-gray-400">Loading...</div>
+          <div className="text-[var(--text-muted)]">Initializing...</div>
         )}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 flex flex-col">
+    <div className="h-screen flex flex-col bg-[var(--bg-base)]">
       {/* Header */}
-      <header className="mb-4">
-        <h1 className="text-2xl font-bold">SortForge</h1>
-      </header>
+      <Header sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} />
 
-      {/* Main content */}
-      <div className="flex-1 flex gap-4">
-        {/* Visualization area */}
-        <div className="flex-1 flex flex-col gap-4">
-          {/* Canvas */}
-          <div className="flex-1 bg-gray-900 overflow-hidden min-h-[300px]">
-            <Canvas renderer={renderer} />
-          </div>
-
-          {/* Controls */}
-          <Controls
-            playbackState={controllerState.playbackState}
-            currentStep={controllerState.currentStep}
-            totalSteps={controllerState.totalSteps}
-            speed={controllerState.speed}
-            onPlay={handlePlay}
-            onPause={handlePause}
-            onStepForward={handleStepForward}
-            onStepBackward={handleStepBackward}
-            onSeek={handleSeek}
-            onSpeedChange={handleSpeedChange}
-            onReset={handleReset}
-          />
+      {/* Main content area */}
+      <div className="flex-1 flex min-h-0">
+        {/* Canvas */}
+        <div className="flex-1 min-w-0">
+          <Canvas renderer={renderer} />
         </div>
 
         {/* Sidebar */}
-        <div className="w-64">
-          <Settings
-            algorithms={algorithms}
-            selectedAlgorithm={selectedAlgorithm}
-            distribution={distribution}
-            arraySize={arraySize}
-            onAlgorithmChange={setSelectedAlgorithm}
-            onDistributionChange={setDistribution}
-            onArraySizeChange={setArraySize}
-            onGenerate={handleGenerate}
-            disabled={isGenerating}
-          />
-        </div>
+        <Sidebar
+          isOpen={sidebarOpen}
+          algorithms={algorithms}
+          selectedAlgorithm={selectedAlgorithm}
+          distribution={distribution}
+          arraySize={arraySize}
+          onAlgorithmChange={setSelectedAlgorithm}
+          onDistributionChange={setDistribution}
+          onArraySizeChange={setArraySize}
+          onGenerate={handleGenerate}
+          disabled={isGenerating}
+        />
       </div>
+
+      {/* Footer controls */}
+      <Controls
+        playbackState={controllerState.playbackState}
+        currentStep={controllerState.currentStep}
+        totalSteps={controllerState.totalSteps}
+        speed={controllerState.speed}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onStepForward={handleStepForward}
+        onStepBackward={handleStepBackward}
+        onSeek={handleSeek}
+        onSpeedChange={handleSpeedChange}
+        onReset={handleReset}
+      />
     </div>
   );
 }
 
-export default App
+export default App;

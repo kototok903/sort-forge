@@ -16,7 +16,7 @@ interface ControlsProps {
 }
 
 /**
- * Playback controls component.
+ * Footer playback controls.
  */
 export function Controls({
   playbackState,
@@ -36,66 +36,89 @@ export function Controls({
   const canStepBackward = currentStep > 0;
 
   return (
-    <div className="flex flex-col gap-4 p-4 bg-gray-800 rounded-lg">
-      {/* Timeline scrubber */}
-      <div className="flex items-center gap-4">
-        <span className="flex items-center justify-between text-sm text-gray-400 w-26">
-          <span className="flex-1 font-semibold">{currentStep}</span>
-          <span>/</span>
-          <span className="flex-1 text-right">{totalSteps}</span>
-        </span>
+    <footer className="footer">
+      {/* Playback buttons */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={onReset}
+          className="btn btn-ghost btn-icon"
+          title="Reset (R)"
+          aria-label="Reset"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4 2v12l10-6z" transform="rotate(180 8 8)" />
+            <rect x="2" y="3" width="2" height="10" />
+          </svg>
+        </button>
+
+        <button
+          onClick={onStepBackward}
+          disabled={!canStepBackward}
+          className="btn btn-ghost btn-icon"
+          title="Step back (←)"
+          aria-label="Step backward"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M10 2v12L2 8z" />
+            <rect x="12" y="3" width="2" height="10" />
+          </svg>
+        </button>
+
+        <button
+          onClick={isPlaying ? onPause : onPlay}
+          className="btn"
+          title="Play/Pause (Space)"
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+          style={{ minWidth: '72px' }}
+        >
+          {isPlaying ? (
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="3" y="2" width="4" height="12" rx="1" />
+              <rect x="9" y="2" width="4" height="12" rx="1" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M4 2v12l10-6z" />
+            </svg>
+          )}
+          <span>{isPlaying ? 'Pause' : 'Play'}</span>
+        </button>
+
+        <button
+          onClick={onStepForward}
+          disabled={!canStepForward}
+          className="btn btn-ghost btn-icon"
+          title="Step forward (→)"
+          aria-label="Step forward"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M6 2v12l8-6z" />
+            <rect x="2" y="3" width="2" height="10" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Timeline */}
+      <div className="flex-1 flex items-center gap-3">
         <input
           type="range"
           min={0}
           max={totalSteps}
           value={currentStep}
           onChange={(e) => onSeek(parseInt(e.target.value, 10))}
-          className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+          className="slider slider-timeline flex-1"
+          aria-label="Timeline"
         />
-      </div>
-
-      {/* Playback buttons */}
-      <div className="flex items-center justify-center gap-2">
-        <button
-          onClick={onReset}
-          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors"
-          title="Reset"
-        >
-          Reset
-        </button>
-
-        <button
-          onClick={onStepBackward}
-          disabled={!canStepBackward}
-          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
-          title="Step backward"
-        >
-          Step -
-        </button>
-
-        <button
-          onClick={isPlaying ? onPause : onPlay}
-          className="px-6 py-2 w-24 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium transition-colors"
-        >
-          {isPlaying ? 'Pause' : 'Play'}
-        </button>
-
-        <button
-          onClick={onStepForward}
-          disabled={!canStepForward}
-          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
-          title="Step forward"
-        >
-          Step +
-        </button>
-      </div>
-
-      {/* Speed control */}
-      <div className="flex items-center gap-4">
-        <span className="flex items-center justify-between text-sm text-gray-400 w-26">
-          <span>Speed:</span>
-          <span className="font-semibold">{speed.toFixed(1)}x</span>
+        <span className="mono text-[var(--text-sm)] text-[var(--text-secondary)] min-w-[10ch] text-right">
+          <span className="text-[var(--text-primary)]">{currentStep}</span>
+          <span className="text-[var(--text-muted)]"> / </span>
+          <span>{totalSteps}</span>
         </span>
+      </div>
+
+      {/* Speed */}
+      <div className="flex items-center gap-2">
+        <span className="label">Speed</span>
         <input
           type="range"
           min={SPEED_MIN}
@@ -103,9 +126,14 @@ export function Controls({
           step={SPEED_STEP}
           value={speed}
           onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
-          className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+          className="slider"
+          style={{ width: '80px' }}
+          aria-label="Speed"
         />
+        <span className="mono text-[var(--text-sm)] text-[var(--text-primary)] min-w-[4ch] text-right">
+          {speed.toFixed(1)}x
+        </span>
       </div>
-    </div>
+    </footer>
   );
 }
