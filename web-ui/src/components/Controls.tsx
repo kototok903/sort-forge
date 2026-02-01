@@ -66,7 +66,7 @@ export function Controls({
 
         <button
           onClick={isPlaying ? onPause : onPlay}
-          className="btn"
+          className="btn w-23"
           title="Play/Pause (Space)"
           aria-label={isPlaying ? 'Pause' : 'Play'}
           style={{ minWidth: '72px' }}
@@ -109,9 +109,9 @@ export function Controls({
           className="slider slider-timeline flex-1"
           aria-label="Timeline"
         />
-        <span className="mono text-[var(--text-sm)] text-[var(--text-secondary)] min-w-[10ch] text-right">
-          <span className="text-[var(--text-primary)]">{currentStep}</span>
-          <span className="text-[var(--text-muted)]"> / </span>
+        <span className="mono text-sm text-secondary min-w-[12ch] text-right">
+          <span className="text-primary">{currentStep}</span>
+          <span className="text-muted"> / </span>
           <span>{totalSteps}</span>
         </span>
       </div>
@@ -130,7 +130,7 @@ export function Controls({
           style={{ width: '80px' }}
           aria-label="Speed"
         />
-        <span className="mono text-[var(--text-sm)] text-[var(--text-primary)] min-w-[4ch] text-right">
+        <span className="mono text-sm text-primary min-w-[4ch] text-right">
           {speed.toFixed(1)}x
         </span>
       </div>

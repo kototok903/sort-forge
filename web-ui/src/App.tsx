@@ -183,18 +183,18 @@ function App() {
   // Show loading state
   if (!wasmReady) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[var(--bg-base)]">
+      <div className="h-screen flex items-center justify-center bg-base">
         {wasmError ? (
-          <div className="text-[var(--error)]">Error: {wasmError}</div>
+          <div className="text-error">Error: {wasmError}</div>
         ) : (
-          <div className="text-[var(--text-muted)]">Initializing...</div>
+          <div className="text-muted">Initializing...</div>
         )}
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[var(--bg-base)]">
+    <div className="h-screen flex flex-col bg-base">
       {/* Header */}
       <Header sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} />
 

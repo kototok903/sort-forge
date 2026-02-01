@@ -9,7 +9,7 @@ interface HeaderProps {
 export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
   return (
     <header className="header">
-      <h1 className="text-[var(--text-lg)] font-semibold tracking-tight">
+      <h1 className="text-lg font-semibold tracking-tight">
         SortForge
       </h1>
 

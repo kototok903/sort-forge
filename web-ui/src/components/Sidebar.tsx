@@ -56,7 +56,7 @@ export function Sidebar({
         <div className="form-group">
           <div className="flex items-center justify-between">
             <label className="label">Size</label>
-            <span className="mono text-[var(--text-sm)] text-[var(--text-primary)]">
+            <span className="mono text-sm text-primary">
               {arraySize}
             </span>
           </div>

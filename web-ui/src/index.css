@@ -1,9 +1,38 @@
 @import "tailwindcss";
 
-/* ========================================
-   SortForge Design System
-   Direction: Functional Warmth
-   ======================================== */
+/* Tailwind Theme Integration
+   Maps CSS variables to Tailwind utilities */
+
+@theme {
+  /* Override Tailwind's default font sizes to match design system */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-base: 0.875rem;
+  --font-size-lg: 1rem;
+  --font-size-xl: 1.125rem;
+
+  /* Text colors (creates text-* utilities) */
+  --text-color-primary: var(--text-primary);
+  --text-color-secondary: var(--text-secondary);
+  --text-color-muted: var(--text-muted);
+  --text-color-error: var(--error);
+  --text-color-success: var(--success);
+  --text-color-warning: var(--warning);
+  --text-color-accent: var(--accent);
+
+  /* Background colors (creates bg-* utilities) */
+  --background-color-base: var(--bg-base);
+  --background-color-surface: var(--bg-surface);
+  --background-color-elevated: var(--bg-elevated);
+  --background-color-overlay: var(--bg-overlay);
+
+  /* Border colors (creates border-* utilities) */
+  --border-color-subtle: var(--border-subtle);
+  --border-color-muted: var(--border-muted);
+}
+
+/* SortForge Design System
+   Direction: Functional Warmth */
 
 :root {
   color-scheme: dark;
@@ -105,9 +134,7 @@
   --sidebar-width: 220px;
 }
 
-/* ========================================
-   Base Styles
-   ======================================== */
+/* Base Styles */
 
 /* Default to dark theme when no data-theme is set */
 html:not([data-theme]) {
@@ -159,9 +186,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ========================================
-   Layout Components
-   ======================================== */
+/* Layout Components */
 
 .header {
   height: var(--header-height);
@@ -200,9 +225,7 @@ body {
   overflow: hidden;
 }
 
-/* ========================================
-   Component: Button
-   ======================================== */
+/* Component: Button */
 
 .btn {
   font-family: var(--font-sans);
@@ -263,9 +286,7 @@ body {
   border-color: transparent;
 }
 
-/* ========================================
-   Component: Input / Select
-   ======================================== */
+/* Component: Input / Select */
 
 .input,
 .select {
@@ -298,9 +319,7 @@ body {
   padding-right: var(--space-5);
 }
 
-/* ========================================
-   Component: Label
-   ======================================== */
+/* Component: Label */
 
 .label {
   font-family: var(--font-sans);
@@ -309,9 +328,7 @@ body {
   color: var(--text-secondary);
 }
 
-/* ========================================
-   Component: Section Header
-   ======================================== */
+/* Component: Section Header */
 
 .section-header {
   font-family: var(--font-sans);
@@ -325,18 +342,15 @@ body {
   margin-bottom: var(--space-4);
 }
 
-/* ========================================
-   Component: Range Slider
-   ======================================== */
+/* Component: Range Slider */
 
 .slider {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
   border-radius: 2px;
-  background: var(--bg-elevated);
+  background: var(--bg-overlay);
   cursor: pointer;
-  flex: 1;
   min-width: 60px;
 }
 
@@ -390,9 +404,7 @@ body {
   height: 14px;
 }
 
-/* ========================================
-   Component: Form Group
-   ======================================== */
+/* Component: Form Group */
 
 .form-group {
   display: flex;
@@ -406,26 +418,9 @@ body {
   gap: var(--space-3);
 }
 
-/* ========================================
-   Utility: Mono text
-   ======================================== */
+/* Utility: Mono text */
 
 .mono {
   font-family: var(--font-mono);
 }
 
-/* ========================================
-   Utility: Text colors
-   ======================================== */
-
-.text-primary {
-  color: var(--text-primary);
-}
-
-.text-secondary {
-  color: var(--text-secondary);
-}
-
-.text-muted {
-  color: var(--text-muted);
-}
