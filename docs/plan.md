@@ -94,28 +94,29 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 5: V2 Engine (State Machine)
 
 ### 5.1 Rust - State Machine Module
-- [ ] Create `live/traits.rs` with `Stepper` trait:
+- [x] Create `live/mod.rs` with `Stepper` trait:
   ```rust
   trait Stepper {
-      fn execute_batch(&mut self, limit: usize) -> Vec<SortEvent>;
+      fn step(&mut self, arr: &mut [i32], limit: usize) -> Vec<SortEvent>;
       fn is_done(&self) -> bool;
-      fn checkpoint(&self) -> Checkpoint;
-      fn restore(&mut self, checkpoint: Checkpoint);
   }
   ```
-- [ ] Create `live/bubble.rs` - iterative bubble sort with explicit `i`, `j` state
-- [ ] Create `live/quick_sort.rs` - explicit stack pattern with `Vec<SortJob>`
-- [ ] Implement checkpointing every ~500 steps
-- [ ] Create public Wasm functions:
-  - `live_create_stepper(algorithm: &str, array: Vec<i32>) -> StepperHandle`
-  - `live_execute_batch(handle, limit) -> Vec<SortEvent>`
-  - `live_seek_checkpoint(handle, checkpoint_id)`
+- [x] Create `live/bubble_sort.rs` - iterative bubble sort with explicit `i`, `j` state
+- [x] Create `live/quicksort_ll.rs` - explicit stack pattern with `Vec<(usize, usize)>`
+- [ ] Implement checkpointing every ~500 steps (deferred - not needed for initial release)
+- [x] Create `LiveStepper` wasm wrapper with:
+  - `new(algorithm: &str, array: JsValue) -> LiveStepper`
+  - `step(limit: usize) -> JsValue`
+  - `is_done() -> bool`
+  - `get_array() -> JsValue`
+- [x] Add `get_live_algorithms()` function
 
 ### 5.2 TypeScript - Live Engine Wrapper
-- [ ] Create `engines/LiveEngine.ts` implementing `ISortEngine` interface
-- [ ] Manage stepper handle lifecycle
-- [ ] Request batches on-demand during animation
-- [ ] Handle deep rewind via checkpoint restoration + re-simulation
+- [x] Create `engines/LiveEngine.ts` implementing `ISortEngine` interface
+- [x] Manage stepper lifecycle (create, free, reset)
+- [x] Request batches on-demand during animation
+- [x] Implement sliding buffer (BATCH_SIZE=200, BUFFER_BATCHES=3) for smooth playback
+- [ ] Handle deep rewind via checkpoint restoration (deferred - uses buffer for local rewind)
 
 ---
 
@@ -139,19 +140,39 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
   }
   ```
 - [x] Update controller to use `ISortEngine` abstraction
-- [ ] Add explicit UI toggle for V1 (Pregen) / V2 (Live) mode selection
+- [x] Add explicit UI toggle for V1 (Pregen) / V2 (Live) mode selection
+- [x] Different array size controls per engine (slider for V1, number input for V2)
+- [x] Hide timeline scrubber when V2 engine selected (canSeek=false)
 
 ---
 
 ## Phase 7: Additional Algorithms
 
-### 7.1 V1 Implementations
-- [ ] Merge sort (with `EnterRange`/`ExitRange` events)
-- [ ] Insertion sort
-- [ ] Selection sort
-- [ ] Heap sort
+### 7.1 V1 Implementations (20 algorithms complete)
+- [x] Bubble sort
+- [x] Selection sort
+- [x] Insertion sort
+- [x] Binary insertion sort
+- [x] Cocktail sort
+- [x] Odd-even sort
+- [x] Gnome sort
+- [x] Pancake sort
+- [x] Shell sort
+- [x] Comb sort
+- [x] Cycle sort
+- [x] QuickSort (LL - Lomuto)
+- [x] QuickSort (LR - Hoare)
+- [x] Merge sort
+- [x] Heap sort
+- [x] Timsort
+- [x] Introsort
+- [x] Radix LSD sort
+- [x] Radix MSD sort
+- [x] Bitonic sort
 
 ### 7.2 V2 Implementations (State Machines)
+- [x] Bubble sort
+- [x] QuickSort (LL - Lomuto)
 - [ ] Merge sort (iterative bottom-up or explicit stack)
 - [ ] Insertion sort
 - [ ] Selection sort
@@ -205,9 +226,9 @@ cd web-ui && npm run build
 4. **Engines are swappable** - controller doesn't know V1 vs V2
 
 ### Memory Considerations
-- V1: O(N²) events stored for full sort (limit to ~2000 elements)
-- V2: O(N) + checkpoint storage (suitable for 10k+ elements)
-- Circular buffer in TS: ~1000 events for smooth local rewind
+- V1: O(N²) events stored for full sort (limit to ~256 elements in UI)
+- V2: O(N) array + sliding buffer (~1200 events) for smooth playback (suitable for 100k+ elements)
+- V2 sliding buffer: 3 batches × 200 events in each direction from current position
 
 ---
 
@@ -218,6 +239,9 @@ cd web-ui && npm run build
 3. **Mode switching**: Explicit UI toggle for V1/V2 mode (no auto-selection)
 4. **Export**: Low priority, moved to future enhancements
 5. **Comparison view**: Future enhancement, not in initial scope
+6. **V2 Wasm interface**: Direct object exposure via enum wrapper (not opaque handles)
+7. **V2 seeking**: No timeline scrubber initially; uses sliding buffer for forward/backward playback
+8. **V2 checkpointing**: Deferred; not needed for initial release since buffer handles local rewind
 
 ---
 
