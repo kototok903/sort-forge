@@ -1,4 +1,5 @@
 pub mod events;
+pub mod live;
 pub mod pregen;
 
 use wasm_bindgen::prelude::*;
