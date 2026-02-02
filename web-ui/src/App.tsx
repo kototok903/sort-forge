@@ -14,9 +14,17 @@ import {
   getAvailableAlgorithms,
 } from "@/engines/PregenEngine";
 import {
-  ARRAY_SIZE_DEFAULT,
+  LiveEngine,
+  initLiveWasm,
+  getAvailableLiveAlgorithms,
+} from "@/engines/LiveEngine";
+import {
+  PREGEN_ARRAY_SIZE_DEFAULT,
+  LIVE_ARRAY_SIZE_DEFAULT,
   DISTRIBUTION_DEFAULT,
   type Distribution,
+  type EngineType,
+  ENGINE_DEFAULT,
   RANDOM_VALUE_MAX,
   RANDOM_VALUE_MIN,
   SPEED_DEFAULT,
@@ -52,10 +60,18 @@ function App() {
   // UI state
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // Engine state
+  const [engineType, setEngineType] = useState<EngineType>(ENGINE_DEFAULT);
+
   // Settings state
-  const [algorithms, setAlgorithms] = useState<string[]>([]);
+  const [pregenAlgorithms, setPregenAlgorithms] = useState<string[]>([]);
+  const [liveAlgorithms, setLiveAlgorithms] = useState<string[]>([]);
+
+  // Current algorithms based on engine type
+  const algorithms = engineType === "pregen" ? pregenAlgorithms : liveAlgorithms;
+
   const [selectedAlgorithm, setSelectedAlgorithm] = useState("");
-  const [arraySize, setArraySize] = useState(ARRAY_SIZE_DEFAULT);
+  const [arraySize, setArraySize] = useState(PREGEN_ARRAY_SIZE_DEFAULT);
   const [distribution, setDistribution] =
     useState<Distribution>(DISTRIBUTION_DEFAULT);
 
@@ -78,13 +94,15 @@ function App() {
 
   // Initialize Wasm on mount
   useEffect(() => {
-    initWasm()
+    Promise.all([initWasm(), initLiveWasm()])
       .then(() => {
         setWasmReady(true);
-        const algos = getAvailableAlgorithms();
-        setAlgorithms(algos);
-        if (algos.length > 0) {
-          setSelectedAlgorithm(algos[0]);
+        const pregen = getAvailableAlgorithms();
+        const live = getAvailableLiveAlgorithms();
+        setPregenAlgorithms(pregen);
+        setLiveAlgorithms(live);
+        if (pregen.length > 0) {
+          setSelectedAlgorithm(pregen[0]);
         }
       })
       .catch((err) => {
@@ -106,7 +124,7 @@ function App() {
   // Auto-generate on initial load
   const [hasInitialized, setHasInitialized] = useState(false);
   useEffect(() => {
-    if (wasmReady && selectedAlgorithm && !hasInitialized) {
+    if (wasmReady && pregenAlgorithms.length > 0 && selectedAlgorithm && !hasInitialized) {
       setHasInitialized(true);
       const array = generateArray(arraySize, distribution);
       const engine = new PregenEngine();
@@ -114,6 +132,7 @@ function App() {
     }
   }, [
     wasmReady,
+    pregenAlgorithms,
     selectedAlgorithm,
     hasInitialized,
     arraySize,
@@ -174,6 +193,17 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [controller, controllerState.playbackState, controllerState.speed]);
 
+  // Handle engine type change
+  const handleEngineTypeChange = useCallback((type: EngineType) => {
+    setEngineType(type);
+    const algos = type === "pregen" ? pregenAlgorithms : liveAlgorithms;
+    if (algos.length > 0 && !algos.includes(selectedAlgorithm)) {
+      setSelectedAlgorithm(algos[0]);
+    }
+    // Reset array size to appropriate default
+    setArraySize(type === "pregen" ? PREGEN_ARRAY_SIZE_DEFAULT : LIVE_ARRAY_SIZE_DEFAULT);
+  }, [pregenAlgorithms, liveAlgorithms, selectedAlgorithm]);
+
   // Generate and start sort
   const handleGenerate = useCallback(async () => {
     if (!wasmReady || isGenerating) return;
@@ -181,7 +211,7 @@ function App() {
     setIsGenerating(true);
     try {
       const array = generateArray(arraySize, distribution);
-      const engine = new PregenEngine();
+      const engine = engineType === "pregen" ? new PregenEngine() : new LiveEngine();
       await controller.initialize(engine, selectedAlgorithm, array);
     } catch (err) {
       console.error("Failed to initialize sort:", err);
@@ -195,6 +225,7 @@ function App() {
     selectedAlgorithm,
     controller,
     distribution,
+    engineType,
   ]);
 
   // Playback handlers
@@ -255,10 +286,12 @@ function App() {
         {/* Sidebar */}
         <Sidebar
           isOpen={sidebarOpen}
+          engineType={engineType}
           algorithms={algorithms}
           selectedAlgorithm={selectedAlgorithm}
           distribution={distribution}
           arraySize={arraySize}
+          onEngineTypeChange={handleEngineTypeChange}
           onAlgorithmChange={setSelectedAlgorithm}
           onDistributionChange={setDistribution}
           onArraySizeChange={setArraySize}
@@ -274,6 +307,7 @@ function App() {
         currentStep={controllerState.currentStep}
         totalSteps={controllerState.totalSteps}
         speed={controllerState.speed}
+        canSeek={engineType === "pregen"}
         onPlayForward={handlePlay}
         onPlayBackward={handlePlayBackward}
         onPause={handlePause}

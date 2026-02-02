@@ -25,4 +25,15 @@ declare module "sort-forge-core" {
 
   /** Initialize the wasm module */
   export default function init(): Promise<void>;
+
+  // V2 Live Engine types
+  export class LiveStepper {
+    constructor(algorithm: string, array: number[]);
+    step(limit: number): SortEvent[];
+    is_done(): boolean;
+    get_array(): number[];
+    free(): void;
+  }
+
+  export function get_live_algorithms(): string[];
 }

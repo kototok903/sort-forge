@@ -11,6 +11,7 @@ interface ControlsProps {
   currentStep: number;
   totalSteps: number;
   speed: number;
+  canSeek: boolean;
   onPlayForward: () => void;
   onPlayBackward: () => void;
   onPause: () => void;
@@ -30,6 +31,7 @@ export function Controls({
   currentStep,
   totalSteps,
   speed,
+  canSeek,
   onPlayForward,
   onPlayBackward,
   onPause,
@@ -117,22 +119,24 @@ export function Controls({
       </div>
 
       {/* Timeline */}
-      <div className="flex-1 flex items-center gap-3">
-        <input
-          type="range"
-          min={0}
-          max={totalSteps}
-          value={currentStep}
-          onChange={(e) => onSeek(parseInt(e.target.value, 10))}
-          className="slider slider-timeline flex-1"
-          aria-label="Timeline"
-        />
-        <span className="mono text-sm text-secondary min-w-[12ch] text-right">
-          <span className="text-primary">{currentStep}</span>
-          <span className="text-muted"> / </span>
-          <span>{totalSteps}</span>
-        </span>
-      </div>
+      {canSeek && (
+        <div className="flex-1 flex items-center gap-3">
+          <input
+            type="range"
+            min={0}
+            max={totalSteps}
+            value={currentStep}
+            onChange={(e) => onSeek(parseInt(e.target.value, 10))}
+            className="slider slider-timeline flex-1"
+            aria-label="Timeline"
+          />
+          <span className="mono text-sm text-secondary min-w-[12ch] text-right">
+            <span className="text-primary">{currentStep}</span>
+            <span className="text-muted"> / </span>
+            <span>{totalSteps}</span>
+          </span>
+        </div>
+      )}
 
       {/* Speed */}
       <div className="flex items-center gap-2">

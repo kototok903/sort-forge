@@ -1,12 +1,19 @@
-import type { Distribution } from "@/config";
-import { ARRAY_SIZE_MAX, ARRAY_SIZE_MIN } from "@/config";
+import type { Distribution, EngineType } from "@/config";
+import {
+  PREGEN_ARRAY_SIZE_MAX,
+  PREGEN_ARRAY_SIZE_MIN,
+  LIVE_ARRAY_SIZE_MIN,
+  LIVE_ARRAY_SIZE_MAX,
+} from "@/config";
 
 interface SidebarProps {
   isOpen: boolean;
+  engineType: EngineType;
   algorithms: string[];
   selectedAlgorithm: string;
   distribution: Distribution;
   arraySize: number;
+  onEngineTypeChange: (type: EngineType) => void;
   onAlgorithmChange: (algorithm: string) => void;
   onDistributionChange: (distribution: Distribution) => void;
   onArraySizeChange: (size: number) => void;
@@ -19,18 +26,52 @@ interface SidebarProps {
  */
 export function Sidebar({
   isOpen,
+  engineType,
   algorithms,
   selectedAlgorithm,
   distribution,
   arraySize,
+  onEngineTypeChange,
   onAlgorithmChange,
   onDistributionChange,
   onArraySizeChange,
   onGenerate,
   disabled = false,
 }: SidebarProps) {
+  const isPregen = engineType === "pregen";
+  const sizeMin = isPregen ? PREGEN_ARRAY_SIZE_MIN : LIVE_ARRAY_SIZE_MIN;
+  const sizeMax = isPregen ? PREGEN_ARRAY_SIZE_MAX : LIVE_ARRAY_SIZE_MAX;
+
   return (
     <aside className={`sidebar ${isOpen ? "" : "collapsed"}`}>
+      {/* Engine Section */}
+      <div className="section-header">Engine</div>
+
+      <div className="flex flex-col gap-2 mb-4">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="engine"
+            checked={engineType === "pregen"}
+            onChange={() => onEngineTypeChange("pregen")}
+            disabled={disabled}
+            className="radio"
+          />
+          <span className="text-sm text-primary">Pregen (V1)</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name="engine"
+            checked={engineType === "live"}
+            onChange={() => onEngineTypeChange("live")}
+            disabled={disabled}
+            className="radio"
+          />
+          <span className="text-sm text-primary">Live (V2)</span>
+        </label>
+      </div>
+
       {/* Array Section */}
       <div className="section-header">Array</div>
 
@@ -52,21 +93,40 @@ export function Sidebar({
           </select>
         </div>
 
-        {/* Size */}
+        {/* Size - different controls for each engine */}
         <div className="form-group">
           <div className="flex items-center justify-between">
             <label className="label">Size</label>
-            <span className="mono text-sm text-primary">{arraySize}</span>
+            {isPregen && (
+              <span className="mono text-sm text-primary">{arraySize}</span>
+            )}
           </div>
-          <input
-            type="range"
-            min={ARRAY_SIZE_MIN}
-            max={ARRAY_SIZE_MAX}
-            value={arraySize}
-            onChange={(e) => onArraySizeChange(parseInt(e.target.value, 10))}
-            disabled={disabled}
-            className="slider"
-          />
+          {isPregen ? (
+            <input
+              type="range"
+              min={sizeMin}
+              max={sizeMax}
+              value={arraySize}
+              onChange={(e) => onArraySizeChange(parseInt(e.target.value, 10))}
+              disabled={disabled}
+              className="slider"
+            />
+          ) : (
+            <input
+              type="number"
+              min={sizeMin}
+              max={sizeMax}
+              value={arraySize}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val) && val >= sizeMin && val <= sizeMax) {
+                  onArraySizeChange(val);
+                }
+              }}
+              disabled={disabled}
+              className="input w-full"
+            />
+          )}
         </div>
 
         {/* Distribution */}
