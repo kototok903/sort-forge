@@ -7,38 +7,38 @@
  */
 
 export interface SwapEvent {
-  type: 'Swap';
+  type: "Swap";
   i: number;
   j: number;
 }
 
 export interface OverwriteEvent {
-  type: 'Overwrite';
+  type: "Overwrite";
   idx: number;
   old_val: number;
   new_val: number;
 }
 
 export interface CompareEvent {
-  type: 'Compare';
+  type: "Compare";
   i: number;
   j: number;
 }
 
 export interface EnterRangeEvent {
-  type: 'EnterRange';
+  type: "EnterRange";
   lo: number;
   hi: number;
 }
 
 export interface ExitRangeEvent {
-  type: 'ExitRange';
+  type: "ExitRange";
   lo: number;
   hi: number;
 }
 
 export interface DoneEvent {
-  type: 'Done';
+  type: "Done";
 }
 
 /** Discriminated union of all sort events */
@@ -57,28 +57,28 @@ export type SortEvent =
  */
 export function inverseEvent(event: SortEvent): SortEvent {
   switch (event.type) {
-    case 'Swap':
+    case "Swap":
       // Swap is self-inverse
       return event;
-    case 'Overwrite':
+    case "Overwrite":
       // Swap old and new values
       return {
-        type: 'Overwrite',
+        type: "Overwrite",
         idx: event.idx,
         old_val: event.new_val,
         new_val: event.old_val,
       };
-    case 'EnterRange':
+    case "EnterRange":
       // EnterRange inverse is ExitRange with same bounds
       return {
-        type: 'ExitRange',
+        type: "ExitRange",
         lo: event.lo,
         hi: event.hi,
       };
-    case 'ExitRange':
+    case "ExitRange":
       // ExitRange inverse is EnterRange with same bounds
       return {
-        type: 'EnterRange',
+        type: "EnterRange",
         lo: event.lo,
         hi: event.hi,
       };
@@ -92,5 +92,5 @@ export function inverseEvent(event: SortEvent): SortEvent {
  * Returns true if the event mutates the array.
  */
 export function isMutationEvent(event: SortEvent): boolean {
-  return event.type === 'Swap' || event.type === 'Overwrite';
+  return event.type === "Swap" || event.type === "Overwrite";
 }

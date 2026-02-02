@@ -1,6 +1,9 @@
-import type { PlaybackState, PlaybackDirection } from '@/controller/AnimationController';
-import { SPEED_MAX, SPEED_MIN, SPEED_STEP } from '@/config';
-import { getPlatformSymbols } from '@/utils';
+import type {
+  PlaybackState,
+  PlaybackDirection,
+} from "@/controller/AnimationController";
+import { SPEED_MAX, SPEED_MIN, SPEED_STEP } from "@/config";
+import { getPlatformSymbols } from "@/utils";
 
 interface ControlsProps {
   playbackState: PlaybackState;
@@ -36,9 +39,9 @@ export function Controls({
   onSpeedChange,
   onReset,
 }: ControlsProps) {
-  const isPlaying = playbackState === 'playing';
-  const isPlayingForward = isPlaying && direction === 'forward';
-  const isPlayingBackward = isPlaying && direction === 'backward';
+  const isPlaying = playbackState === "playing";
+  const isPlayingForward = isPlaying && direction === "forward";
+  const isPlayingBackward = isPlaying && direction === "backward";
   const canPlayForward = currentStep < totalSteps;
   const canPlayBackward = currentStep > 0;
   const canStepForward = currentStep < totalSteps;
@@ -77,9 +80,9 @@ export function Controls({
         <button
           onClick={isPlayingBackward ? onPause : onPlayBackward}
           disabled={!canPlayBackward && !isPlayingBackward}
-          className={`btn btn-icon ${isPlayingBackward ? 'btn-active' : 'btn-ghost'}`}
+          className={`btn btn-icon ${isPlayingBackward ? "btn-active" : "btn-ghost"}`}
           title={`Play backward (${getPlatformSymbols().shift}+Space)`}
-          aria-label={isPlayingBackward ? 'Pause' : 'Play backward'}
+          aria-label={isPlayingBackward ? "Pause" : "Play backward"}
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <path d="M12 2v12L4 8z" />
@@ -90,9 +93,9 @@ export function Controls({
         <button
           onClick={isPlayingForward ? onPause : onPlayForward}
           disabled={!canPlayForward && !isPlayingForward}
-          className={`btn btn-icon ${isPlayingForward ? 'btn-active' : 'btn-ghost'}`}
+          className={`btn btn-icon ${isPlayingForward ? "btn-active" : "btn-ghost"}`}
           title="Play forward (Space)"
-          aria-label={isPlayingForward ? 'Pause' : 'Play forward'}
+          aria-label={isPlayingForward ? "Pause" : "Play forward"}
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <path d="M4 2v12l8-6z" />
@@ -142,7 +145,7 @@ export function Controls({
           value={speed}
           onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
           className="slider"
-          style={{ width: '80px' }}
+          style={{ width: "80px" }}
           aria-label="Speed"
         />
         <span className="mono text-sm text-primary min-w-[4ch] text-right">

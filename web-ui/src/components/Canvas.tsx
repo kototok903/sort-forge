@@ -1,5 +1,5 @@
-import { useRef, useEffect } from 'react';
-import type { IRenderer } from '@/renderer/types';
+import { useRef, useEffect } from "react";
+import type { IRenderer } from "@/renderer/types";
 
 interface CanvasProps {
   renderer: IRenderer;
@@ -9,7 +9,7 @@ interface CanvasProps {
 /**
  * Canvas component that hosts the visualization.
  */
-export function Canvas({ renderer, className = '' }: CanvasProps) {
+export function Canvas({ renderer, className = "" }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -22,14 +22,9 @@ export function Canvas({ renderer, className = '' }: CanvasProps) {
       renderer.resize();
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [renderer]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className={`w-full h-full ${className}`}
-    />
-  );
+  return <canvas ref={canvasRef} className={`w-full h-full ${className}`} />;
 }

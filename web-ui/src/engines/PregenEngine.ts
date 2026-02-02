@@ -1,8 +1,8 @@
-import type { SortEvent } from '@/types/events';
-import type { ISortEngine } from '@/engines/types';
+import type { SortEvent } from "@/types/events";
+import type { ISortEngine } from "@/engines/types";
 
 // Wasm module - will be initialized lazily
-let wasmModule: typeof import('sort-forge-core') | null = null;
+let wasmModule: typeof import("sort-forge-core") | null = null;
 let wasmInitPromise: Promise<void> | null = null;
 
 /**
@@ -13,7 +13,7 @@ export async function initWasm(): Promise<void> {
 
   if (!wasmInitPromise) {
     wasmInitPromise = (async () => {
-      const wasm = await import('sort-forge-core');
+      const wasm = await import("sort-forge-core");
       await wasm.default();
       wasmModule = wasm;
     })();
@@ -27,7 +27,7 @@ export async function initWasm(): Promise<void> {
  */
 export function getAvailableAlgorithms(): string[] {
   if (!wasmModule) {
-    throw new Error('Wasm module not initialized. Call initWasm() first.');
+    throw new Error("Wasm module not initialized. Call initWasm() first.");
   }
   return wasmModule.get_available_algorithms() as string[];
 }
@@ -40,7 +40,7 @@ export function getAvailableAlgorithms(): string[] {
  * Best for arrays up to ~2000 elements.
  */
 export class PregenEngine implements ISortEngine {
-  readonly name = 'Pregeneration (V1)';
+  readonly name = "Pregeneration (V1)";
   readonly canSeek = true;
 
   private events: SortEvent[] = [];
@@ -51,7 +51,7 @@ export class PregenEngine implements ISortEngine {
     await initWasm();
 
     if (!wasmModule) {
-      throw new Error('Wasm module not initialized');
+      throw new Error("Wasm module not initialized");
     }
 
     // Run the full sort and get all events

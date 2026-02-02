@@ -1,16 +1,16 @@
-import type { SortEvent } from '@/types/events';
-import type { ISortEngine } from '@/engines/types';
-import type { RenderState, BarState, IRenderer } from '@/renderer/types';
-import { inverseEvent } from '@/types/events';
+import type { SortEvent } from "@/types/events";
+import type { ISortEngine } from "@/engines/types";
+import type { RenderState, BarState, IRenderer } from "@/renderer/types";
+import { inverseEvent } from "@/types/events";
 import {
   BASE_EVENTS_PER_SECOND,
   SPEED_DEFAULT,
   SPEED_MAX,
   SPEED_MIN,
-} from '@/config';
+} from "@/config";
 
-export type PlaybackState = 'idle' | 'playing' | 'paused' | 'done';
-export type PlaybackDirection = 'forward' | 'backward';
+export type PlaybackState = "idle" | "playing" | "paused" | "done";
+export type PlaybackDirection = "forward" | "backward";
 
 export interface ControllerState {
   playbackState: PlaybackState;
@@ -37,8 +37,8 @@ export class AnimationController {
   private maxValue = 1;
 
   // Playback state
-  private playbackState: PlaybackState = 'idle';
-  private direction: PlaybackDirection = 'forward';
+  private playbackState: PlaybackState = "idle";
+  private direction: PlaybackDirection = "forward";
   private currentStep = 0;
   private totalSteps = 0;
   private speed = SPEED_DEFAULT;
@@ -67,7 +67,11 @@ export class AnimationController {
   }
 
   /** Initialize with a new sort */
-  async initialize(engine: ISortEngine, algorithm: string, array: number[]): Promise<void> {
+  async initialize(
+    engine: ISortEngine,
+    algorithm: string,
+    array: number[]
+  ): Promise<void> {
     this.stop();
 
     this.engine = engine;
@@ -79,7 +83,7 @@ export class AnimationController {
 
     this.totalSteps = engine.getTotalEvents();
     this.currentStep = 0;
-    this.playbackState = 'idle';
+    this.playbackState = "idle";
 
     this.notifyListeners();
     this.render();
@@ -87,14 +91,14 @@ export class AnimationController {
 
   /** Start or resume playback */
   play(): void {
-    if (this.playbackState === 'done') {
+    if (this.playbackState === "done") {
       this.reset();
     }
     if (this.engine?.canSeek) {
       this.engine.seek(this.currentStep);
     }
-    this.direction = 'forward';
-    this.playbackState = 'playing';
+    this.direction = "forward";
+    this.playbackState = "playing";
     this.lastFrameTime = performance.now();
     this.accumulatedTime = 0;
     this.startAnimationLoop();
@@ -103,15 +107,15 @@ export class AnimationController {
 
   /** Start or resume backward playback */
   playBackward(): void {
-    if (this.playbackState === 'done') {
+    if (this.playbackState === "done") {
       // If at the end, just start playing backward from current position
     }
     if (this.currentStep <= 0) {
       // Already at start, nothing to play backward
       return;
     }
-    this.direction = 'backward';
-    this.playbackState = 'playing';
+    this.direction = "backward";
+    this.playbackState = "playing";
     this.lastFrameTime = performance.now();
     this.accumulatedTime = 0;
     this.startAnimationLoop();
@@ -120,14 +124,14 @@ export class AnimationController {
 
   /** Pause playback */
   pause(): void {
-    this.playbackState = 'paused';
+    this.playbackState = "paused";
     this.stopAnimationLoop();
     this.notifyListeners();
   }
 
   /** Stop and reset to beginning */
   stop(): void {
-    this.playbackState = 'idle';
+    this.playbackState = "idle";
     this.stopAnimationLoop();
     this.reset();
   }
@@ -138,8 +142,8 @@ export class AnimationController {
     this.currentStep = 0;
     this.engine?.reset();
 
-    if (this.playbackState === 'done') {
-      this.playbackState = 'idle';
+    if (this.playbackState === "done") {
+      this.playbackState = "idle";
     }
 
     this.notifyListeners();
@@ -159,7 +163,7 @@ export class AnimationController {
       }
 
       if (this.currentStep >= this.totalSteps) {
-        this.playbackState = 'done';
+        this.playbackState = "done";
         this.stopAnimationLoop();
       }
     }
@@ -182,8 +186,8 @@ export class AnimationController {
       this.engine.seek(this.currentStep);
     }
 
-    if (this.playbackState === 'done') {
-      this.playbackState = 'paused';
+    if (this.playbackState === "done") {
+      this.playbackState = "paused";
     }
 
     this.notifyListeners();
@@ -219,10 +223,10 @@ export class AnimationController {
     }
 
     if (this.currentStep >= this.totalSteps) {
-      this.playbackState = 'done';
+      this.playbackState = "done";
       this.stopAnimationLoop();
-    } else if (this.playbackState === 'done') {
-      this.playbackState = 'paused';
+    } else if (this.playbackState === "done") {
+      this.playbackState = "paused";
     }
 
     this.notifyListeners();
@@ -259,7 +263,7 @@ export class AnimationController {
     if (this.animationId !== null) return;
 
     const animate = (time: number) => {
-      if (this.playbackState !== 'playing') return;
+      if (this.playbackState !== "playing") return;
 
       const deltaTime = time - this.lastFrameTime;
       this.lastFrameTime = time;
@@ -271,7 +275,7 @@ export class AnimationController {
       if (eventsToProcess > 0 && this.engine) {
         this.accumulatedTime -= eventsToProcess * msPerEvent;
 
-        if (this.direction === 'forward') {
+        if (this.direction === "forward") {
           // Forward playback (existing logic)
           const batch = this.engine.getNextEvents(eventsToProcess);
           for (const event of batch) {
@@ -292,18 +296,18 @@ export class AnimationController {
       }
 
       // Check for completion
-      if (this.direction === 'forward' && this.currentStep >= this.totalSteps) {
-        this.playbackState = 'done';
+      if (this.direction === "forward" && this.currentStep >= this.totalSteps) {
+        this.playbackState = "done";
         this.stopAnimationLoop();
-      } else if (this.direction === 'backward' && this.currentStep <= 0) {
-        this.playbackState = 'paused';
+      } else if (this.direction === "backward" && this.currentStep <= 0) {
+        this.playbackState = "paused";
         this.stopAnimationLoop();
       }
 
       this.notifyListeners();
       this.render();
 
-      if (this.playbackState === 'playing') {
+      if (this.playbackState === "playing") {
         this.animationId = requestAnimationFrame(animate);
       }
     };
@@ -325,26 +329,27 @@ export class AnimationController {
 
   private applyEventToArray(event: SortEvent): void {
     switch (event.type) {
-      case 'Swap': {
+      case "Swap": {
         const temp = this.array[event.i];
         this.array[event.i] = this.array[event.j];
         this.array[event.j] = temp;
         break;
       }
-      case 'Overwrite': {
+      case "Overwrite": {
         this.array[event.idx] = event.new_val;
         break;
       }
-      case 'EnterRange': {
+      case "EnterRange": {
         this.rangeStack.push({ lo: event.lo, hi: event.hi });
         this.activeRange = { lo: event.lo, hi: event.hi };
         break;
       }
-      case 'ExitRange': {
+      case "ExitRange": {
         this.rangeStack.pop();
-        this.activeRange = this.rangeStack.length > 0
-          ? this.rangeStack[this.rangeStack.length - 1]
-          : null;
+        this.activeRange =
+          this.rangeStack.length > 0
+            ? this.rangeStack[this.rangeStack.length - 1]
+            : null;
         break;
       }
     }
@@ -352,23 +357,23 @@ export class AnimationController {
 
   private applyVisualState(event: SortEvent): void {
     // Reset all bar states to default first
-    this.barStates.fill('default');
+    this.barStates.fill("default");
 
     switch (event.type) {
-      case 'Compare':
-        this.barStates[event.i] = 'comparing';
-        this.barStates[event.j] = 'comparing';
+      case "Compare":
+        this.barStates[event.i] = "comparing";
+        this.barStates[event.j] = "comparing";
         break;
-      case 'Swap':
-        this.barStates[event.i] = 'swapping';
-        this.barStates[event.j] = 'swapping';
+      case "Swap":
+        this.barStates[event.i] = "swapping";
+        this.barStates[event.j] = "swapping";
         break;
-      case 'Overwrite':
-        this.barStates[event.idx] = 'writing';
+      case "Overwrite":
+        this.barStates[event.idx] = "writing";
         break;
-      case 'Done':
+      case "Done":
         // Mark all as sorted
-        this.barStates.fill('sorted');
+        this.barStates.fill("sorted");
         break;
     }
   }
@@ -377,7 +382,7 @@ export class AnimationController {
     if (!this.engine) return;
 
     if (step <= 0) {
-      this.barStates.fill('default');
+      this.barStates.fill("default");
       return;
     }
 
@@ -385,7 +390,7 @@ export class AnimationController {
     if (event) {
       this.applyVisualState(event);
     } else {
-      this.barStates.fill('default');
+      this.barStates.fill("default");
     }
   }
 
@@ -405,7 +410,7 @@ export class AnimationController {
 
   private resetArrayState(array: number[]): void {
     this.array = [...array];
-    this.barStates = new Array(this.array.length).fill('default');
+    this.barStates = new Array(this.array.length).fill("default");
     this.activeRange = null;
     this.rangeStack = [];
   }

@@ -1,16 +1,35 @@
-import type { IRenderer, RenderState, BarState } from '@/renderer/types';
+import type { IRenderer, RenderState, BarState } from "@/renderer/types";
 
 /** Bar state colors (fill, border, glow) - matches CSS --viz-* tokens */
-const COLORS: Record<BarState, { fill: string; border: string; glow?: string }> = {
-  default: { fill: '#5a5a62', border: '#4a4a52' },
-  comparing: { fill: '#fbbf24', border: '#f59e0b', glow: 'rgba(251, 191, 36, 0.4)' },
-  swapping: { fill: '#f97316', border: '#ea580c', glow: 'rgba(249, 115, 22, 0.5)' },
-  writing: { fill: '#ef4444', border: '#dc2626', glow: 'rgba(239, 68, 68, 0.5)' },
-  sorted: { fill: '#22d3ee', border: '#06b6d4', glow: 'rgba(34, 211, 238, 0.3)' },
+const COLORS: Record<
+  BarState,
+  { fill: string; border: string; glow?: string }
+> = {
+  default: { fill: "#5a5a62", border: "#4a4a52" },
+  comparing: {
+    fill: "#fbbf24",
+    border: "#f59e0b",
+    glow: "rgba(251, 191, 36, 0.4)",
+  },
+  swapping: {
+    fill: "#f97316",
+    border: "#ea580c",
+    glow: "rgba(249, 115, 22, 0.5)",
+  },
+  writing: {
+    fill: "#ef4444",
+    border: "#dc2626",
+    glow: "rgba(239, 68, 68, 0.5)",
+  },
+  sorted: {
+    fill: "#22d3ee",
+    border: "#06b6d4",
+    glow: "rgba(34, 211, 238, 0.3)",
+  },
 };
 
 /** Background color - matches --bg-base */
-const BG_COLOR = '#18181b';
+const BG_COLOR = "#18181b";
 
 /** Padding */
 const PADDING_TOP = 0;
@@ -29,7 +48,7 @@ const BAR_BASE_HEIGHT_RATIO = 0.05;
 const BAR_BASE_HEIGHT_MIN = 2;
 const BAR_BASE_HEIGHT_MAX = 10;
 
-const ACTIVE_RANGE_COLOR = '#22d3ee';
+const ACTIVE_RANGE_COLOR = "#22d3ee";
 const ACTIVE_RANGE_LINE_HEIGHT = 3;
 const ACTIVE_RANGE_LINE_GAP = 4;
 
@@ -47,7 +66,7 @@ export class CanvasRenderer implements IRenderer {
 
   setCanvas(canvas: HTMLCanvasElement): void {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
+    this.ctx = canvas.getContext("2d");
     this.resize();
   }
 
@@ -85,22 +104,36 @@ export class CanvasRenderer implements IRenderer {
 
     // Calculate bar dimensions
     const barCount = array.length;
-    const gap = BAR_GAP_ENABLED ? Math.min(BAR_GAP_MAX, width / barCount * BAR_GAP_RATIO) : 0;
-    const barWidth = (width - gap * (barCount - 1) - PADDING_LEFT - PADDING_RIGHT) / barCount;
+    const gap = BAR_GAP_ENABLED
+      ? Math.min(BAR_GAP_MAX, (width / barCount) * BAR_GAP_RATIO)
+      : 0;
+    const barWidth =
+      (width - gap * (barCount - 1) - PADDING_LEFT - PADDING_RIGHT) / barCount;
     const valueRange = maxValue - minValue || 1; // Prevent division by zero
-    const maxBarHeight = Math.max(0, height - ACTIVE_RANGE_LINE_HEIGHT - ACTIVE_RANGE_LINE_GAP - PADDING_TOP - PADDING_BOTTOM);
-    const barBaseHeight = Math.max(BAR_BASE_HEIGHT_MIN, Math.min(BAR_BASE_HEIGHT_MAX, maxBarHeight * BAR_BASE_HEIGHT_RATIO));
+    const maxBarHeight = Math.max(
+      0,
+      height -
+        ACTIVE_RANGE_LINE_HEIGHT -
+        ACTIVE_RANGE_LINE_GAP -
+        PADDING_TOP -
+        PADDING_BOTTOM
+    );
+    const barBaseHeight = Math.max(
+      BAR_BASE_HEIGHT_MIN,
+      Math.min(BAR_BASE_HEIGHT_MAX, maxBarHeight * BAR_BASE_HEIGHT_RATIO)
+    );
     if (maxBarHeight < barBaseHeight) return;
 
     // First pass: Draw bars with glow effects (active states only)
     for (let i = 0; i < array.length; i++) {
-      const barState = barStates[i] || 'default';
+      const barState = barStates[i] || "default";
       const colors = COLORS[barState];
 
       if (colors.glow) {
         const value = array[i];
         const normalizedValue = (value - minValue) / valueRange;
-        const barHeight = barBaseHeight + normalizedValue * (maxBarHeight - barBaseHeight);
+        const barHeight =
+          barBaseHeight + normalizedValue * (maxBarHeight - barBaseHeight);
         const x = PADDING_LEFT + i * (barWidth + gap);
         const y = PADDING_TOP + maxBarHeight - barHeight;
 
@@ -117,12 +150,13 @@ export class CanvasRenderer implements IRenderer {
     // Second pass: Draw all bars
     for (let i = 0; i < array.length; i++) {
       const value = array[i];
-      const barState = barStates[i] || 'default';
+      const barState = barStates[i] || "default";
       const colors = COLORS[barState];
 
       // Calculate bar height
       const normalizedValue = (value - minValue) / valueRange;
-      const barHeight = barBaseHeight + normalizedValue * (maxBarHeight - barBaseHeight);
+      const barHeight =
+        barBaseHeight + normalizedValue * (maxBarHeight - barBaseHeight);
 
       // Calculate bar position
       const x = PADDING_LEFT + i * (barWidth + gap);
@@ -141,12 +175,14 @@ export class CanvasRenderer implements IRenderer {
     // Draw active range line
     if (activeRange) {
       const lineX = PADDING_LEFT + activeRange.lo * (barWidth + gap);
-      const lineWidth = (activeRange.hi - activeRange.lo + 1) * barWidth + (activeRange.hi - activeRange.lo) * gap;
+      const lineWidth =
+        (activeRange.hi - activeRange.lo + 1) * barWidth +
+        (activeRange.hi - activeRange.lo) * gap;
       const lineY = height - PADDING_BOTTOM - ACTIVE_RANGE_LINE_HEIGHT;
 
       // Glow for range line
       this.ctx.save();
-      this.ctx.shadowColor = 'rgba(34, 211, 238, 0.4)';
+      this.ctx.shadowColor = "rgba(34, 211, 238, 0.4)";
       this.ctx.shadowBlur = 6;
       this.ctx.fillStyle = ACTIVE_RANGE_COLOR;
       this.ctx.fillRect(lineX, lineY, lineWidth, ACTIVE_RANGE_LINE_HEIGHT);

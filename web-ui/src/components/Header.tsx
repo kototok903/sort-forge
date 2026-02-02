@@ -9,15 +9,13 @@ interface HeaderProps {
 export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
   return (
     <header className="header">
-      <h1 className="text-lg font-semibold tracking-tight">
-        SortForge
-      </h1>
+      <h1 className="text-lg font-semibold tracking-tight">SortForge</h1>
 
       <button
         onClick={onToggleSidebar}
         className="btn btn-ghost btn-icon"
-        title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
-        aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+        title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+        aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
       >
         <svg
           width="16"

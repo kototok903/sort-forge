@@ -1,5 +1,5 @@
-import type { Distribution } from '@/config';
-import { ARRAY_SIZE_MAX, ARRAY_SIZE_MIN } from '@/config';
+import type { Distribution } from "@/config";
+import { ARRAY_SIZE_MAX, ARRAY_SIZE_MIN } from "@/config";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -30,7 +30,7 @@ export function Sidebar({
   disabled = false,
 }: SidebarProps) {
   return (
-    <aside className={`sidebar ${isOpen ? '' : 'collapsed'}`}>
+    <aside className={`sidebar ${isOpen ? "" : "collapsed"}`}>
       {/* Array Section */}
       <div className="section-header">Array</div>
 
@@ -56,9 +56,7 @@ export function Sidebar({
         <div className="form-group">
           <div className="flex items-center justify-between">
             <label className="label">Size</label>
-            <span className="mono text-sm text-primary">
-              {arraySize}
-            </span>
+            <span className="mono text-sm text-primary">{arraySize}</span>
           </div>
           <input
             type="range"
@@ -76,7 +74,9 @@ export function Sidebar({
           <label className="label">Distribution</label>
           <select
             value={distribution}
-            onChange={(e) => onDistributionChange(e.target.value as Distribution)}
+            onChange={(e) =>
+              onDistributionChange(e.target.value as Distribution)
+            }
             disabled={disabled}
             className="select w-full"
           >
@@ -99,10 +99,10 @@ export function Sidebar({
 }
 
 const SPECIAL_ALGORITHM_NAMES: Record<string, string> = {
-  quicksort_ll: 'Quicksort (LL)',
-  quicksort_lr: 'Quicksort (LR)',
-  radix_lsd: 'Radix LSD Sort',
-  radix_msd: 'Radix MSD Sort',
+  quicksort_ll: "Quicksort (LL)",
+  quicksort_lr: "Quicksort (LR)",
+  radix_lsd: "Radix LSD Sort",
+  radix_msd: "Radix MSD Sort",
 };
 
 /**
@@ -114,12 +114,12 @@ function formatAlgorithmName(name: string): string {
   }
 
   const formatted = name
-    .split('_')
+    .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .join(" ");
 
-  if (!formatted.toLowerCase().endsWith('sort')) {
-    return formatted + ' Sort';
+  if (!formatted.toLowerCase().endsWith("sort")) {
+    return formatted + " Sort";
   }
   return formatted;
 }

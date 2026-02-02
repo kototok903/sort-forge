@@ -1,7 +1,12 @@
 /**
  * Visual state for each bar in the visualization.
  */
-export type BarState = 'default' | 'comparing' | 'swapping' | 'writing' | 'sorted';
+export type BarState =
+  | "default"
+  | "comparing"
+  | "swapping"
+  | "writing"
+  | "sorted";
 
 /**
  * Render state passed to the renderer each frame.
