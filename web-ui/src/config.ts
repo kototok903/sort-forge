@@ -1,6 +1,6 @@
-export const ARRAY_SIZE_DEFAULT = 50;
+export const ARRAY_SIZE_DEFAULT = 128;
 export const ARRAY_SIZE_MIN = 5;
-export const ARRAY_SIZE_MAX = 200;
+export const ARRAY_SIZE_MAX = 256;
 
 export type Distribution = 'random' | 'uniform';
 export const DISTRIBUTION_DEFAULT: Distribution = 'uniform';

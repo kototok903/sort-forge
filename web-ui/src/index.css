@@ -286,6 +286,17 @@ body {
   border-color: transparent;
 }
 
+.btn-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-base);
+}
+
+.btn-active:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
 /* Component: Input / Select */
 
 .input,

@@ -1,12 +1,15 @@
-import type { PlaybackState } from '@/controller/AnimationController';
+import type { PlaybackState, PlaybackDirection } from '@/controller/AnimationController';
 import { SPEED_MAX, SPEED_MIN, SPEED_STEP } from '@/config';
+import { getPlatformSymbols } from '@/utils';
 
 interface ControlsProps {
   playbackState: PlaybackState;
+  direction: PlaybackDirection;
   currentStep: number;
   totalSteps: number;
   speed: number;
-  onPlay: () => void;
+  onPlayForward: () => void;
+  onPlayBackward: () => void;
   onPause: () => void;
   onStepForward: () => void;
   onStepBackward: () => void;
@@ -20,10 +23,12 @@ interface ControlsProps {
  */
 export function Controls({
   playbackState,
+  direction,
   currentStep,
   totalSteps,
   speed,
-  onPlay,
+  onPlayForward,
+  onPlayBackward,
   onPause,
   onStepForward,
   onStepBackward,
@@ -32,6 +37,10 @@ export function Controls({
   onReset,
 }: ControlsProps) {
   const isPlaying = playbackState === 'playing';
+  const isPlayingForward = isPlaying && direction === 'forward';
+  const isPlayingBackward = isPlaying && direction === 'backward';
+  const canPlayForward = currentStep < totalSteps;
+  const canPlayBackward = currentStep > 0;
   const canStepForward = currentStep < totalSteps;
   const canStepBackward = currentStep > 0;
 
@@ -64,24 +73,30 @@ export function Controls({
           </svg>
         </button>
 
+        {/* Play Backward button */}
         <button
-          onClick={isPlaying ? onPause : onPlay}
-          className="btn w-23"
-          title="Play/Pause (Space)"
-          aria-label={isPlaying ? 'Pause' : 'Play'}
-          style={{ minWidth: '72px' }}
+          onClick={isPlayingBackward ? onPause : onPlayBackward}
+          disabled={!canPlayBackward && !isPlayingBackward}
+          className={`btn btn-icon ${isPlayingBackward ? 'btn-active' : 'btn-ghost'}`}
+          title={`Play backward (${getPlatformSymbols().shift}+Space)`}
+          aria-label={isPlayingBackward ? 'Pause' : 'Play backward'}
         >
-          {isPlaying ? (
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              <rect x="3" y="2" width="4" height="12" rx="1" />
-              <rect x="9" y="2" width="4" height="12" rx="1" />
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M4 2v12l10-6z" />
-            </svg>
-          )}
-          <span>{isPlaying ? 'Pause' : 'Play'}</span>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M12 2v12L4 8z" />
+          </svg>
+        </button>
+
+        {/* Play Forward button */}
+        <button
+          onClick={isPlayingForward ? onPause : onPlayForward}
+          disabled={!canPlayForward && !isPlayingForward}
+          className={`btn btn-icon ${isPlayingForward ? 'btn-active' : 'btn-ghost'}`}
+          title="Play forward (Space)"
+          aria-label={isPlayingForward ? 'Pause' : 'Play forward'}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4 2v12l8-6z" />
+          </svg>
         </button>
 
         <button

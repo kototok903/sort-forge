@@ -10,9 +10,11 @@ import {
 } from '@/config';
 
 export type PlaybackState = 'idle' | 'playing' | 'paused' | 'done';
+export type PlaybackDirection = 'forward' | 'backward';
 
 export interface ControllerState {
   playbackState: PlaybackState;
+  direction: PlaybackDirection;
   currentStep: number;
   totalSteps: number;
   speed: number;
@@ -36,6 +38,7 @@ export class AnimationController {
 
   // Playback state
   private playbackState: PlaybackState = 'idle';
+  private direction: PlaybackDirection = 'forward';
   private currentStep = 0;
   private totalSteps = 0;
   private speed = SPEED_DEFAULT;
@@ -90,6 +93,24 @@ export class AnimationController {
     if (this.engine?.canSeek) {
       this.engine.seek(this.currentStep);
     }
+    this.direction = 'forward';
+    this.playbackState = 'playing';
+    this.lastFrameTime = performance.now();
+    this.accumulatedTime = 0;
+    this.startAnimationLoop();
+    this.notifyListeners();
+  }
+
+  /** Start or resume backward playback */
+  playBackward(): void {
+    if (this.playbackState === 'done') {
+      // If at the end, just start playing backward from current position
+    }
+    if (this.currentStep <= 0) {
+      // Already at start, nothing to play backward
+      return;
+    }
+    this.direction = 'backward';
     this.playbackState = 'playing';
     this.lastFrameTime = performance.now();
     this.accumulatedTime = 0;
@@ -218,6 +239,7 @@ export class AnimationController {
   getState(): ControllerState {
     return {
       playbackState: this.playbackState,
+      direction: this.direction,
       currentStep: this.currentStep,
       totalSteps: this.totalSteps,
       speed: this.speed,
@@ -248,15 +270,33 @@ export class AnimationController {
       const eventsToProcess = Math.floor(this.accumulatedTime / msPerEvent);
       if (eventsToProcess > 0 && this.engine) {
         this.accumulatedTime -= eventsToProcess * msPerEvent;
-        const batch = this.engine.getNextEvents(eventsToProcess);
-        for (const event of batch) {
-          this.applyEvent(event);
-          this.currentStep++;
+
+        if (this.direction === 'forward') {
+          // Forward playback (existing logic)
+          const batch = this.engine.getNextEvents(eventsToProcess);
+          for (const event of batch) {
+            this.applyEvent(event);
+            this.currentStep++;
+          }
+        } else {
+          // Backward playback
+          for (let i = 0; i < eventsToProcess && this.currentStep > 0; i++) {
+            this.currentStep--;
+            const event = this.engine.getEventAt(this.currentStep);
+            if (event) {
+              this.applyEventToArray(inverseEvent(event));
+            }
+            this.applyVisualStateForStep(this.currentStep);
+          }
         }
       }
 
-      if (this.currentStep >= this.totalSteps) {
+      // Check for completion
+      if (this.direction === 'forward' && this.currentStep >= this.totalSteps) {
         this.playbackState = 'done';
+        this.stopAnimationLoop();
+      } else if (this.direction === 'backward' && this.currentStep <= 0) {
+        this.playbackState = 'paused';
         this.stopAnimationLoop();
       }
 

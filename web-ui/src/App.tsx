@@ -14,6 +14,7 @@ import {
   RANDOM_VALUE_MIN,
   SPEED_DEFAULT,
 } from '@/config';
+import { getIsModKey } from '@/utils';
 
 function generateArray(size: number, distribution: Distribution): number[] {
   switch (distribution) {
@@ -53,6 +54,7 @@ function App() {
   // Controller state (synced from AnimationController)
   const [controllerState, setControllerState] = useState<ControllerState>({
     playbackState: 'idle',
+    direction: 'forward',
     currentStep: 0,
     totalSteps: 0,
     speed: SPEED_DEFAULT,
@@ -117,6 +119,8 @@ function App() {
           e.preventDefault();
           if (controllerState.playbackState === 'playing') {
             controller.pause();
+          } else if (e.shiftKey) {
+            controller.playBackward();
           } else {
             controller.play();
           }
@@ -130,8 +134,10 @@ function App() {
           controller.stepBackward();
           break;
         case 'KeyR':
-          e.preventDefault();
-          controller.reset();
+          if (!getIsModKey(e)) {
+            e.preventDefault();
+            controller.reset();
+          }
           break;
         case 'Equal':
         case 'NumpadAdd':
@@ -168,6 +174,7 @@ function App() {
 
   // Playback handlers
   const handlePlay = useCallback(() => controller.play(), [controller]);
+  const handlePlayBackward = useCallback(() => controller.playBackward(), [controller]);
   const handlePause = useCallback(() => controller.pause(), [controller]);
   const handleStepForward = useCallback(() => controller.stepForward(), [controller]);
   const handleStepBackward = useCallback(() => controller.stepBackward(), [controller]);
@@ -223,10 +230,12 @@ function App() {
       {/* Footer controls */}
       <Controls
         playbackState={controllerState.playbackState}
+        direction={controllerState.direction}
         currentStep={controllerState.currentStep}
         totalSteps={controllerState.totalSteps}
         speed={controllerState.speed}
-        onPlay={handlePlay}
+        onPlayForward={handlePlay}
+        onPlayBackward={handlePlayBackward}
         onPause={handlePause}
         onStepForward={handleStepForward}
         onStepBackward={handleStepBackward}
