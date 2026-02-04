@@ -19,19 +19,15 @@ import {
   getAvailableLiveAlgorithms,
 } from "@/engines/LiveEngine";
 import {
-  PREGEN_ARRAY_SIZE_DEFAULT,
-  LIVE_ARRAY_SIZE_DEFAULT,
-  DISTRIBUTION_DEFAULT,
   type Distribution,
   type EngineType,
-  ENGINE_DEFAULT,
   RANDOM_VALUE_MAX,
   RANDOM_VALUE_MIN,
   SPEED_DEFAULT,
 } from "@/config";
 import { getIsModKey } from "@/utils";
-import { DEFAULT_THEME_ID, THEMES, applyTheme } from "@/themes/themes";
-import type { ThemeId } from "@/themes/types";
+import { THEMES, applyTheme } from "@/themes/themes";
+import { useSettings } from "@/settings/useSettings";
 
 function generateArray(size: number, distribution: Distribution): number[] {
   switch (distribution) {
@@ -59,24 +55,28 @@ function App() {
   const [wasmReady, setWasmReady] = useState(false);
   const [wasmError, setWasmError] = useState<string | null>(null);
 
-  // UI state
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // Engine state
-  const [engineType, setEngineType] = useState<EngineType>(ENGINE_DEFAULT);
-
-  // Settings state
+  // Available algorithms (loaded from Wasm)
   const [pregenAlgorithms, setPregenAlgorithms] = useState<string[]>([]);
   const [liveAlgorithms, setLiveAlgorithms] = useState<string[]>([]);
 
-  // Current algorithms based on engine type
+  // Persisted settings
+  const { settings, setSettings } = useSettings({
+    pregenAlgorithms,
+    liveAlgorithms,
+  });
+
+  // Derived state from settings
+  const engineType = settings.engineType;
   const algorithms =
     engineType === "pregen" ? pregenAlgorithms : liveAlgorithms;
-
-  const [selectedAlgorithm, setSelectedAlgorithm] = useState("");
-  const [arraySize, setArraySize] = useState(PREGEN_ARRAY_SIZE_DEFAULT);
-  const [distribution, setDistribution] =
-    useState<Distribution>(DISTRIBUTION_DEFAULT);
+  const selectedAlgorithm =
+    engineType === "pregen"
+      ? settings.pregenAlgorithm
+      : settings.liveAlgorithm;
+  const arraySize =
+    engineType === "pregen"
+      ? settings.pregenArraySize
+      : settings.liveArraySize;
 
   // Controller state (synced from AnimationController)
   const [controllerState, setControllerState] = useState<ControllerState>({
@@ -91,9 +91,6 @@ function App() {
   // Loading state
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Theme state
-  const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
-
   // Create stable instances of renderer and controller
   const renderer = useMemo(() => new CanvasRenderer(), []);
   const controller = useMemo(() => new AnimationController(), []);
@@ -103,13 +100,8 @@ function App() {
     Promise.all([initWasm(), initLiveWasm()])
       .then(() => {
         setWasmReady(true);
-        const pregen = getAvailableAlgorithms();
-        const live = getAvailableLiveAlgorithms();
-        setPregenAlgorithms(pregen);
-        setLiveAlgorithms(live);
-        if (pregen.length > 0) {
-          setSelectedAlgorithm(pregen[0]);
-        }
+        setPregenAlgorithms(getAvailableAlgorithms());
+        setLiveAlgorithms(getAvailableLiveAlgorithms());
       })
       .catch((err) => {
         setWasmError(err.message || "Failed to load Wasm module");
@@ -137,8 +129,9 @@ function App() {
       !hasInitialized
     ) {
       setHasInitialized(true);
-      const array = generateArray(arraySize, distribution);
-      const engine = new PregenEngine();
+      const array = generateArray(arraySize, settings.distribution);
+      const engine =
+        engineType === "pregen" ? new PregenEngine() : new LiveEngine();
       controller.initialize(engine, selectedAlgorithm, array);
     }
   }, [
@@ -147,17 +140,18 @@ function App() {
     selectedAlgorithm,
     hasInitialized,
     arraySize,
-    distribution,
+    settings.distribution,
+    engineType,
     controller,
   ]);
 
   // Apply theme when it changes
   useEffect(() => {
-    const theme = THEMES[themeId];
+    const theme = THEMES[settings.themeId];
     applyTheme(theme);
     renderer.setTheme(theme.viz);
     controller.forceRender();
-  }, [themeId, renderer, controller]);
+  }, [settings.themeId, renderer, controller]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -215,17 +209,49 @@ function App() {
   // Handle engine type change
   const handleEngineTypeChange = useCallback(
     (type: EngineType) => {
-      setEngineType(type);
-      const algos = type === "pregen" ? pregenAlgorithms : liveAlgorithms;
-      if (algos.length > 0 && !algos.includes(selectedAlgorithm)) {
-        setSelectedAlgorithm(algos[0]);
-      }
-      // Reset array size to appropriate default
-      setArraySize(
-        type === "pregen" ? PREGEN_ARRAY_SIZE_DEFAULT : LIVE_ARRAY_SIZE_DEFAULT
-      );
+      setSettings({ engineType: type });
     },
-    [pregenAlgorithms, liveAlgorithms, selectedAlgorithm]
+    [setSettings]
+  );
+
+  // Handle algorithm change
+  const handleAlgorithmChange = useCallback(
+    (algorithm: string) => {
+      if (engineType === "pregen") {
+        setSettings({ pregenAlgorithm: algorithm });
+      } else {
+        setSettings({ liveAlgorithm: algorithm });
+      }
+    },
+    [engineType, setSettings]
+  );
+
+  // Handle array size change
+  const handleArraySizeChange = useCallback(
+    (size: number) => {
+      if (engineType === "pregen") {
+        setSettings({ pregenArraySize: size });
+      } else {
+        setSettings({ liveArraySize: size });
+      }
+    },
+    [engineType, setSettings]
+  );
+
+  // Handle distribution change
+  const handleDistributionChange = useCallback(
+    (distribution: Distribution) => {
+      setSettings({ distribution });
+    },
+    [setSettings]
+  );
+
+  // Handle theme change
+  const handleThemeChange = useCallback(
+    (themeId: string) => {
+      setSettings({ themeId: themeId as import("@/themes/types").ThemeId });
+    },
+    [setSettings]
   );
 
   // Generate and start sort
@@ -234,7 +260,7 @@ function App() {
 
     setIsGenerating(true);
     try {
-      const array = generateArray(arraySize, distribution);
+      const array = generateArray(arraySize, settings.distribution);
       const engine =
         engineType === "pregen" ? new PregenEngine() : new LiveEngine();
       await controller.initialize(engine, selectedAlgorithm, array);
@@ -249,7 +275,7 @@ function App() {
     arraySize,
     selectedAlgorithm,
     controller,
-    distribution,
+    settings.distribution,
     engineType,
   ]);
 
@@ -280,8 +306,8 @@ function App() {
 
   // Toggle sidebar
   const handleToggleSidebar = useCallback(() => {
-    setSidebarOpen((prev) => !prev);
-  }, []);
+    setSettings({ sidebarOpen: !settings.sidebarOpen });
+  }, [settings.sidebarOpen, setSettings]);
 
   // Show loading state
   if (!wasmReady) {
@@ -299,7 +325,10 @@ function App() {
   return (
     <div className="h-screen flex flex-col bg-base">
       {/* Header */}
-      <Header sidebarOpen={sidebarOpen} onToggleSidebar={handleToggleSidebar} />
+      <Header
+        sidebarOpen={settings.sidebarOpen}
+        onToggleSidebar={handleToggleSidebar}
+      />
 
       {/* Main content area */}
       <div className="flex-1 flex min-h-0">
@@ -310,18 +339,18 @@ function App() {
 
         {/* Sidebar */}
         <Sidebar
-          isOpen={sidebarOpen}
+          isOpen={settings.sidebarOpen}
           engineType={engineType}
           algorithms={algorithms}
           selectedAlgorithm={selectedAlgorithm}
-          distribution={distribution}
+          distribution={settings.distribution}
           arraySize={arraySize}
-          themeId={themeId}
+          themeId={settings.themeId}
           onEngineTypeChange={handleEngineTypeChange}
-          onAlgorithmChange={setSelectedAlgorithm}
-          onDistributionChange={setDistribution}
-          onArraySizeChange={setArraySize}
-          onThemeChange={setThemeId}
+          onAlgorithmChange={handleAlgorithmChange}
+          onDistributionChange={handleDistributionChange}
+          onArraySizeChange={handleArraySizeChange}
+          onThemeChange={handleThemeChange}
           onGenerate={handleGenerate}
           disabled={isGenerating}
         />

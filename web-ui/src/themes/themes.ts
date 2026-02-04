@@ -1,8 +1,15 @@
 // web-ui/src/themes/themes.ts
 
-import type { Theme, ThemeId } from "@/themes/types";
+import { THEME_IDS, type Theme, type ThemeId } from "@/themes/types";
 
 export const DEFAULT_THEME_ID: ThemeId = "forge";
+
+/**
+ * Check if a string is a valid theme ID.
+ */
+export function isValidThemeId(id: string): id is ThemeId {
+  return THEME_IDS.includes(id as ThemeId);
+}
 
 export const THEMES: Record<ThemeId, Theme> = {
   // Forge - Default dark theme
