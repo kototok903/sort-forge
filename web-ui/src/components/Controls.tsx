@@ -44,9 +44,9 @@ export function Controls({
   const isPlaying = playbackState === "playing";
   const isPlayingForward = isPlaying && direction === "forward";
   const isPlayingBackward = isPlaying && direction === "backward";
-  const canPlayForward = currentStep < totalSteps;
+  const canPlayForward = canSeek ? currentStep < totalSteps : playbackState !== "done";
   const canPlayBackward = currentStep > 0;
-  const canStepForward = currentStep < totalSteps;
+  const canStepForward = canSeek ? currentStep < totalSteps : playbackState !== "done";
   const canStepBackward = currentStep > 0;
 
   return (

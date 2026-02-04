@@ -94,7 +94,7 @@ export class AnimationController {
     if (this.playbackState === "done") {
       this.reset();
     }
-    if (this.engine?.canSeek) {
+    if (this.engine) {
       this.engine.seek(this.currentStep);
     }
     this.direction = "forward";
@@ -141,6 +141,9 @@ export class AnimationController {
     this.resetArrayState(this.initialArray);
     this.currentStep = 0;
     this.engine?.reset();
+    if (this.engine) {
+      this.totalSteps = this.engine.getTotalEvents();
+    }
 
     if (this.playbackState === "done") {
       this.playbackState = "idle";
@@ -152,20 +155,38 @@ export class AnimationController {
 
   /** Step forward one event */
   stepForward(): void {
-    if (!this.engine || this.currentStep >= this.totalSteps) return;
+    if (!this.engine) return;
 
-    const event = this.engine.getEventAt(this.currentStep);
-    if (event) {
+    if (this.engine.canSeek) {
+      if (this.currentStep >= this.totalSteps) return;
+
+      const event = this.engine.getEventAt(this.currentStep);
+      if (!event) return;
+
       this.applyEvent(event);
       this.currentStep++;
-      if (this.engine.canSeek) {
-        this.engine.seek(this.currentStep);
-      }
+      this.engine.seek(this.currentStep);
 
       if (this.currentStep >= this.totalSteps) {
         this.playbackState = "done";
         this.stopAnimationLoop();
       }
+    } else {
+      const batch = this.engine.getNextEvents(1);
+      if (batch.length === 0) {
+        if (this.engine.isDone()) {
+          this.playbackState = "done";
+          this.stopAnimationLoop();
+          this.totalSteps = this.currentStep;
+        }
+        this.notifyListeners();
+        this.render();
+        return;
+      }
+
+      this.applyEvent(batch[0]);
+      this.currentStep++;
+      this.totalSteps = this.engine.getTotalEvents();
     }
 
     this.notifyListeners();
@@ -176,15 +197,14 @@ export class AnimationController {
   stepBackward(): void {
     if (!this.engine || this.currentStep <= 0) return;
 
-    this.currentStep--;
-    const event = this.engine.getEventAt(this.currentStep);
-    if (event) {
-      this.applyEventToArray(inverseEvent(event));
-    }
+    const targetStep = this.currentStep - 1;
+    const event = this.engine.getEventAt(targetStep);
+    if (!event) return;
+
+    this.currentStep = targetStep;
+    this.applyEventToArray(inverseEvent(event));
     this.applyVisualStateForStep(this.currentStep);
-    if (this.engine.canSeek) {
-      this.engine.seek(this.currentStep);
-    }
+    this.engine.seek(this.currentStep);
 
     if (this.playbackState === "done") {
       this.playbackState = "paused";
@@ -196,7 +216,7 @@ export class AnimationController {
 
   /** Seek to a specific step */
   seekTo(step: number): void {
-    if (!this.engine) return;
+    if (!this.engine || !this.engine.canSeek) return;
 
     const targetStep = Math.max(0, Math.min(step, this.totalSteps));
 
@@ -285,20 +305,38 @@ export class AnimationController {
         } else {
           // Backward playback
           for (let i = 0; i < eventsToProcess && this.currentStep > 0; i++) {
-            this.currentStep--;
-            const event = this.engine.getEventAt(this.currentStep);
-            if (event) {
-              this.applyEventToArray(inverseEvent(event));
+            const targetStep = this.currentStep - 1;
+            const event = this.engine.getEventAt(targetStep);
+            if (!event) {
+              if (!this.engine.canSeek) {
+                this.playbackState = "paused";
+                this.stopAnimationLoop();
+              }
+              break;
             }
+
+            this.currentStep = targetStep;
+            this.applyEventToArray(inverseEvent(event));
             this.applyVisualStateForStep(this.currentStep);
           }
+          this.engine.seek(this.currentStep);
         }
       }
 
+      if (this.engine && !this.engine.canSeek) {
+        this.totalSteps = this.engine.getTotalEvents();
+      }
+
       // Check for completion
-      if (this.direction === "forward" && this.currentStep >= this.totalSteps) {
-        this.playbackState = "done";
-        this.stopAnimationLoop();
+      if (this.direction === "forward") {
+        if (this.engine?.canSeek && this.currentStep >= this.totalSteps) {
+          this.playbackState = "done";
+          this.stopAnimationLoop();
+        } else if (!this.engine?.canSeek && this.engine?.isDone()) {
+          this.playbackState = "done";
+          this.stopAnimationLoop();
+          this.totalSteps = this.currentStep;
+        }
       } else if (this.direction === "backward" && this.currentStep <= 0) {
         this.playbackState = "paused";
         this.stopAnimationLoop();
@@ -416,13 +454,20 @@ export class AnimationController {
   }
 
   private updateMinMax(array: number[]): void {
-    if (array.length > 0) {
-      this.minValue = Math.min(...array);
-      this.maxValue = Math.max(...array);
-    } else {
+    if (array.length === 0) {
       this.minValue = 0;
       this.maxValue = 1;
+      return;
     }
+
+    let min = array[0];
+    let max = array[0];
+    for (let i = 1; i < array.length; i++) {
+      min = Math.min(min, array[i]);
+      max = Math.max(max, array[i]);
+    }
+    this.minValue = min;
+    this.maxValue = max;
   }
 
   private notifyListeners(): void {

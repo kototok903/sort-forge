@@ -148,10 +148,14 @@ export class LiveEngine implements ISortEngine {
 
     const targetSize = this.BATCH_SIZE * this.BUFFER_BATCHES;
     const bufferOffset = this.position - this.bufferStart;
-    const eventsAhead = this.eventBuffer.length - bufferOffset;
-
-    while (eventsAhead < targetSize && !this.stepper.is_done()) {
+    while (
+      this.eventBuffer.length - bufferOffset < targetSize &&
+      !this.stepper.is_done()
+    ) {
       const events = this.stepper.step(this.BATCH_SIZE) as SortEvent[];
+      if (events.length === 0) {
+        break;
+      }
       this.eventBuffer.push(...events);
       this.totalEventsGenerated += events.length;
 
