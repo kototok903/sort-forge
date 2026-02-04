@@ -1,9 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   validateSettings,
   type Settings,
   type ValidationContext,
-} from "./types";
+} from "@/settings/types";
 
 const STORAGE_KEY = "sortforge:settings";
 const SAVE_DEBOUNCE_MS = 300;
@@ -41,30 +41,22 @@ function saveToStorage(settings: Settings): void {
  * available algorithms, and automatically persisted on changes.
  */
 export function useSettings(ctx: ValidationContext) {
-  const [settings, setSettingsState] = useState<Settings>(() => {
+  const [rawSettings, setRawSettings] = useState<Settings>(() => {
     const raw = loadFromStorage();
     return validateSettings(raw, ctx);
   });
 
   // Re-validate when context changes (algorithms loaded)
-  const prevCtxRef = useRef(ctx);
-  useEffect(() => {
-    const prevCtx = prevCtxRef.current;
-    const algorithmsChanged =
-      prevCtx.pregenAlgorithms !== ctx.pregenAlgorithms ||
-      prevCtx.liveAlgorithms !== ctx.liveAlgorithms;
-
-    if (algorithmsChanged) {
-      prevCtxRef.current = ctx;
-      setSettingsState((prev) => validateSettings(prev, ctx));
-    }
-  }, [ctx]);
+  const settings = useMemo(
+    () => validateSettings(rawSettings, ctx),
+    [rawSettings, ctx]
+  );
 
   // Debounced save to localStorage
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setSettings = useCallback((update: Partial<Settings>) => {
-    setSettingsState((prev) => {
+    setRawSettings((prev) => {
       const next = { ...prev, ...update };
 
       // Debounce save

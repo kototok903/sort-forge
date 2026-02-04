@@ -12,6 +12,8 @@ import {
   SPEED_MAX,
   SPEED_MIN,
 } from "@/config";
+import { SoundEngine } from "@/sound/SoundEngine";
+import type { SoundConfig } from "@/sound/types";
 
 export type PlaybackState = "idle" | "playing" | "paused" | "done";
 export type PlaybackDirection = "forward" | "backward";
@@ -61,6 +63,9 @@ export class AnimationController {
   // Listeners
   private listeners: Set<StateListener> = new Set();
 
+  // Sound
+  private soundEngine: SoundEngine = new SoundEngine();
+
   /** Set the renderer to use */
   setRenderer(renderer: IRenderer): void {
     this.renderer = renderer;
@@ -83,6 +88,7 @@ export class AnimationController {
     this.initialArray = [...array];
     this.resetArrayState(array);
     this.updateMinMax(array);
+    this.soundEngine.setValueRange(this.minValue, this.maxValue);
 
     await engine.initialize(algorithm, array);
 
@@ -281,6 +287,26 @@ export class AnimationController {
     };
   }
 
+  /** Initialize sound engine (call after user interaction) */
+  initSound(): void {
+    this.soundEngine.init();
+  }
+
+  /** Resume sound context if suspended */
+  resumeSound(): void {
+    this.soundEngine.resume();
+  }
+
+  /** Update sound configuration */
+  setSoundConfig(config: Partial<SoundConfig>): void {
+    this.soundEngine.setConfig(config);
+  }
+
+  /** Get current sound configuration */
+  getSoundConfig(): SoundConfig {
+    return this.soundEngine.getConfig();
+  }
+
   /** Subscribe to state changes */
   subscribe(listener: StateListener): () => void {
     this.listeners.add(listener);
@@ -310,6 +336,7 @@ export class AnimationController {
           const batch = this.engine.getNextEvents(eventsToProcess);
           let lastEvent: SortEvent | null = null;
           for (const event of batch) {
+            this.soundEngine.playEvent(event, this.array);
             this.applyEventToArray(event);
             this.currentStep++;
             lastEvent = event;
@@ -380,6 +407,7 @@ export class AnimationController {
   }
 
   private applyEvent(event: SortEvent): void {
+    this.soundEngine.playEvent(event, this.array);
     this.applyEventToArray(event);
     this.applyVisualState(event);
   }

@@ -11,6 +11,11 @@ import {
 } from "@/config";
 import { DEFAULT_THEME_ID, isValidThemeId } from "@/themes/themes";
 import type { ThemeId } from "@/themes/types";
+import {
+  SOUND_WAVEFORMS,
+  type SoundWaveform,
+  DEFAULT_SOUND_CONFIG,
+} from "@/sound/types";
 
 /**
  * Persisted application settings.
@@ -25,6 +30,8 @@ export interface Settings {
   distribution: Distribution;
   themeId: ThemeId;
   sidebarOpen: boolean;
+  soundWaveform: SoundWaveform;
+  soundVolume: number;
 }
 
 /**
@@ -47,6 +54,8 @@ export const DEFAULT_SETTINGS: Settings = {
   distribution: DISTRIBUTION_DEFAULT,
   themeId: DEFAULT_THEME_ID,
   sidebarOpen: true,
+  soundWaveform: DEFAULT_SOUND_CONFIG.waveform,
+  soundVolume: DEFAULT_SOUND_CONFIG.volume,
 };
 
 /**
@@ -120,6 +129,19 @@ export function validateSettings(
   // Sidebar open
   if (typeof obj.sidebarOpen === "boolean") {
     settings.sidebarOpen = obj.sidebarOpen;
+  }
+
+  // Sound waveform - validate against allowed values
+  if (
+    typeof obj.soundWaveform === "string" &&
+    SOUND_WAVEFORMS.includes(obj.soundWaveform as SoundWaveform)
+  ) {
+    settings.soundWaveform = obj.soundWaveform as SoundWaveform;
+  }
+
+  // Sound volume - clamp to valid range
+  if (typeof obj.soundVolume === "number" && !isNaN(obj.soundVolume)) {
+    settings.soundVolume = Math.max(0, Math.min(1, obj.soundVolume));
   }
 
   return applyAlgorithmDefaults(settings, ctx);

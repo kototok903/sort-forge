@@ -443,3 +443,12 @@ body {
   cursor: not-allowed;
 }
 
+/* Component: Checkbox */
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+

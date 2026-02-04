@@ -28,6 +28,7 @@ import {
 import { getIsModKey } from "@/utils";
 import { THEMES, applyTheme } from "@/themes/themes";
 import { useSettings } from "@/settings/useSettings";
+import type { SoundWaveform } from "@/sound/types";
 
 function generateArray(size: number, distribution: Distribution): number[] {
   switch (distribution) {
@@ -153,6 +154,18 @@ function App() {
     controller.forceRender();
   }, [settings.themeId, renderer, controller]);
 
+  // Apply sound settings when they change
+  useEffect(() => {
+    controller.setSoundConfig({
+      waveform: settings.soundWaveform,
+      volume: settings.soundVolume,
+    });
+    // Initialize audio context if sound is enabled
+    if (settings.soundWaveform !== "none") {
+      controller.initSound();
+    }
+  }, [settings.soundWaveform, settings.soundVolume, controller]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -254,6 +267,28 @@ function App() {
     [setSettings]
   );
 
+  // Handle sound waveform change
+  const handleSoundWaveformChange = useCallback(
+    (waveform: SoundWaveform) => {
+      if (waveform !== "none") {
+        controller.initSound();
+        controller.resumeSound();
+      }
+      controller.setSoundConfig({ waveform });
+      setSettings({ soundWaveform: waveform });
+    },
+    [controller, setSettings]
+  );
+
+  // Handle sound volume change
+  const handleSoundVolumeChange = useCallback(
+    (volume: number) => {
+      controller.setSoundConfig({ volume });
+      setSettings({ soundVolume: volume });
+    },
+    [controller, setSettings]
+  );
+
   // Generate and start sort
   const handleGenerate = useCallback(async () => {
     if (!wasmReady || isGenerating) return;
@@ -323,7 +358,10 @@ function App() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-base">
+    <div
+      className="h-screen flex flex-col bg-base"
+      onClick={() => controller.resumeSound()}
+    >
       {/* Header */}
       <Header
         sidebarOpen={settings.sidebarOpen}
@@ -346,11 +384,15 @@ function App() {
           distribution={settings.distribution}
           arraySize={arraySize}
           themeId={settings.themeId}
+          soundWaveform={settings.soundWaveform}
+          soundVolume={settings.soundVolume}
           onEngineTypeChange={handleEngineTypeChange}
           onAlgorithmChange={handleAlgorithmChange}
           onDistributionChange={handleDistributionChange}
           onArraySizeChange={handleArraySizeChange}
           onThemeChange={handleThemeChange}
+          onSoundWaveformChange={handleSoundWaveformChange}
+          onSoundVolumeChange={handleSoundVolumeChange}
           onGenerate={handleGenerate}
           disabled={isGenerating}
         />

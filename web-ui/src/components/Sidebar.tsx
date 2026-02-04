@@ -7,6 +7,11 @@ import {
 } from "@/config";
 import { THEMES } from "@/themes/themes";
 import { THEME_IDS, type ThemeId } from "@/themes/types";
+import {
+  SOUND_WAVEFORMS,
+  SOUND_WAVEFORM_LABELS,
+  type SoundWaveform,
+} from "@/sound/types";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -16,11 +21,15 @@ interface SidebarProps {
   distribution: Distribution;
   arraySize: number;
   themeId: ThemeId;
+  soundWaveform: SoundWaveform;
+  soundVolume: number;
   onEngineTypeChange: (type: EngineType) => void;
   onAlgorithmChange: (algorithm: string) => void;
   onDistributionChange: (distribution: Distribution) => void;
   onArraySizeChange: (size: number) => void;
   onThemeChange: (themeId: ThemeId) => void;
+  onSoundWaveformChange: (waveform: SoundWaveform) => void;
+  onSoundVolumeChange: (volume: number) => void;
   onGenerate: () => void;
   disabled?: boolean;
 }
@@ -36,11 +45,15 @@ export function Sidebar({
   distribution,
   arraySize,
   themeId,
+  soundWaveform,
+  soundVolume,
   onEngineTypeChange,
   onAlgorithmChange,
   onDistributionChange,
   onArraySizeChange,
   onThemeChange,
+  onSoundWaveformChange,
+  onSoundVolumeChange,
   onGenerate,
   disabled = false,
 }: SidebarProps) {
@@ -169,17 +182,58 @@ export function Sidebar({
       {/* Bottom - Theme Section */}
       <div className="pt-4">
         <div className="section-header">Customization</div>
-        <select
-          value={themeId}
-          onChange={(e) => onThemeChange(e.target.value as ThemeId)}
-          className="select w-full"
-        >
-          {THEME_IDS.map((id) => (
-            <option key={id} value={id}>
-              {THEMES[id].name}
-            </option>
-          ))}
-        </select>
+        <div className="form-group">
+          <label className="label">Theme</label>
+          <select
+            value={themeId}
+            onChange={(e) => onThemeChange(e.target.value as ThemeId)}
+            className="select w-full"
+          >
+            {THEME_IDS.map((id) => (
+              <option key={id} value={id}>
+                {THEMES[id].name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Sound controls */}
+        <div className="form-group mt-3">
+          <label className="label">Sound</label>
+          <select
+            value={soundWaveform}
+            onChange={(e) =>
+              onSoundWaveformChange(e.target.value as SoundWaveform)
+            }
+            className="select w-full"
+          >
+            {SOUND_WAVEFORMS.map((wf) => (
+              <option key={wf} value={wf}>
+                {SOUND_WAVEFORM_LABELS[wf]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group mt-2">
+          <div className="flex items-center justify-between">
+            <label className="label">Volume</label>
+            <span className="mono text-sm text-primary">
+              {Math.round(soundVolume * 100)}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(soundVolume * 100)}
+            onChange={(e) =>
+              onSoundVolumeChange(parseInt(e.target.value, 10) / 100)
+            }
+            className="slider w-full"
+            disabled={soundWaveform === "none"}
+          />
+        </div>
       </div>
     </aside>
   );
