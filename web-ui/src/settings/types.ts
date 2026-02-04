@@ -56,7 +56,6 @@ export function validateSettings(
   raw: unknown,
   ctx: ValidationContext
 ): Settings {
-  console.log("validateSettings", raw, ctx);
   const settings = { ...DEFAULT_SETTINGS };
 
   if (typeof raw !== "object" || raw === null) {
