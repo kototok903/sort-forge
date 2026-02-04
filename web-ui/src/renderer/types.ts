@@ -1,14 +1,12 @@
 /**
- * Visual state for each bar in the visualization.
+ * Highlight types for overlay rendering.
  */
-export const BAR_STATE_DEFAULT = 0;
-export const BAR_STATE_COMPARING = 1;
-export const BAR_STATE_SWAPPING = 2;
-export const BAR_STATE_WRITING = 3;
-export const BAR_STATE_SORTED = 4;
+export type HighlightKind = "comparing" | "swapping" | "writing";
 
-export type BarState = 0 | 1 | 2 | 3 | 4;
-export type BarStateBuffer = Uint8Array;
+export interface Highlight {
+  kind: HighlightKind;
+  indices: number[];
+}
 
 /**
  * Render state passed to the renderer each frame.
@@ -23,8 +21,8 @@ export interface RenderState {
   /** Fixed maximum value for consistent scaling during a run */
   maxValue: number;
 
-  /** Visual state for each bar (indexed by array position) */
-  barStates: BarStateBuffer;
+  /** Highlight overlays for the current frame */
+  highlights: Highlight[];
 
   /** Whether the array is fully sorted */
   isSorted: boolean;

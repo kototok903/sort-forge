@@ -1,13 +1,9 @@
 import type { SortEvent } from "@/types/events";
 import type { ISortEngine } from "@/engines/types";
-import {
-  BAR_STATE_COMPARING,
-  BAR_STATE_DEFAULT,
-  BAR_STATE_SWAPPING,
-  BAR_STATE_WRITING,
-  type BarState,
-  type RenderState,
-  type IRenderer,
+import type {
+  Highlight,
+  RenderState,
+  IRenderer,
 } from "@/renderer/types";
 import { inverseEvent } from "@/types/events";
 import {
@@ -57,11 +53,10 @@ export class AnimationController {
   private accumulatedTime = 0;
 
   // Visual state tracking
-  private barStates = new Uint8Array(0);
+  private highlights: Highlight[] = [];
   private activeRange: { lo: number; hi: number } | null = null;
   private rangeStack: { lo: number; hi: number }[] = [];
   private isSorted = false;
-  private lastHighlightEvent: SortEvent | null = null;
 
   // Listeners
   private listeners: Set<StateListener> = new Set();
@@ -412,57 +407,38 @@ export class AnimationController {
     }
   }
 
-  private setBarState(index: number, state: BarState): void {
-    if (index < 0 || index >= this.barStates.length) return;
-    this.barStates[index] = state;
-  }
-
-  private clearHighlightForEvent(event: SortEvent | null): void {
-    if (!event) return;
-
-    switch (event.type) {
-      case "Compare":
-      case "Swap":
-        this.setBarState(event.i, BAR_STATE_DEFAULT);
-        this.setBarState(event.j, BAR_STATE_DEFAULT);
-        break;
-      case "Overwrite":
-        this.setBarState(event.idx, BAR_STATE_DEFAULT);
-        break;
-    }
-  }
-
   private applyVisualState(event: SortEvent): void {
-    this.clearHighlightForEvent(this.lastHighlightEvent);
     this.isSorted = false;
+    this.highlights = [];
 
     switch (event.type) {
       case "Compare":
-        this.setBarState(event.i, BAR_STATE_COMPARING);
-        this.setBarState(event.j, BAR_STATE_COMPARING);
+        this.highlights = [
+          { kind: "comparing", indices: [event.i, event.j] },
+        ];
         break;
       case "Swap":
-        this.setBarState(event.i, BAR_STATE_SWAPPING);
-        this.setBarState(event.j, BAR_STATE_SWAPPING);
+        this.highlights = [
+          { kind: "swapping", indices: [event.i, event.j] },
+        ];
         break;
       case "Overwrite":
-        this.setBarState(event.idx, BAR_STATE_WRITING);
+        this.highlights = [
+          { kind: "writing", indices: [event.idx] },
+        ];
         break;
       case "Done":
         this.isSorted = true;
         break;
     }
-
-    this.lastHighlightEvent = event;
   }
 
   private applyVisualStateForStep(step: number): void {
     if (!this.engine) return;
 
     if (step <= 0) {
-      this.clearHighlightForEvent(this.lastHighlightEvent);
-      this.lastHighlightEvent = null;
       this.isSorted = false;
+      this.highlights = [];
       return;
     }
 
@@ -470,9 +446,8 @@ export class AnimationController {
     if (event) {
       this.applyVisualState(event);
     } else {
-      this.clearHighlightForEvent(this.lastHighlightEvent);
-      this.lastHighlightEvent = null;
       this.isSorted = false;
+      this.highlights = [];
     }
   }
 
@@ -483,7 +458,7 @@ export class AnimationController {
       array: this.array,
       minValue: this.minValue,
       maxValue: this.maxValue,
-      barStates: this.barStates,
+      highlights: this.highlights,
       isSorted: this.isSorted,
       activeRange: this.activeRange,
     };
@@ -493,11 +468,10 @@ export class AnimationController {
 
   private resetArrayState(array: number[]): void {
     this.array = [...array];
-    this.barStates = new Uint8Array(this.array.length);
     this.activeRange = null;
     this.rangeStack = [];
     this.isSorted = false;
-    this.lastHighlightEvent = null;
+    this.highlights = [];
   }
 
   private updateMinMax(array: number[]): void {
