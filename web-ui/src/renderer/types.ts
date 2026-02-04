@@ -1,12 +1,14 @@
 /**
  * Visual state for each bar in the visualization.
  */
-export type BarState =
-  | "default"
-  | "comparing"
-  | "swapping"
-  | "writing"
-  | "sorted";
+export const BAR_STATE_DEFAULT = 0;
+export const BAR_STATE_COMPARING = 1;
+export const BAR_STATE_SWAPPING = 2;
+export const BAR_STATE_WRITING = 3;
+export const BAR_STATE_SORTED = 4;
+
+export type BarState = 0 | 1 | 2 | 3 | 4;
+export type BarStateBuffer = Uint8Array;
 
 /**
  * Render state passed to the renderer each frame.
@@ -22,7 +24,10 @@ export interface RenderState {
   maxValue: number;
 
   /** Visual state for each bar (indexed by array position) */
-  barStates: BarState[];
+  barStates: BarStateBuffer;
+
+  /** Whether the array is fully sorted */
+  isSorted: boolean;
 
   /** Currently active range (for highlighting subarrays), null if none */
   activeRange: { lo: number; hi: number } | null;

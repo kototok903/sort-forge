@@ -1,6 +1,14 @@
 import type { SortEvent } from "@/types/events";
 import type { ISortEngine } from "@/engines/types";
-import type { RenderState, BarState, IRenderer } from "@/renderer/types";
+import {
+  BAR_STATE_COMPARING,
+  BAR_STATE_DEFAULT,
+  BAR_STATE_SWAPPING,
+  BAR_STATE_WRITING,
+  type BarState,
+  type RenderState,
+  type IRenderer,
+} from "@/renderer/types";
 import { inverseEvent } from "@/types/events";
 import {
   BASE_EVENTS_PER_SECOND,
@@ -49,9 +57,11 @@ export class AnimationController {
   private accumulatedTime = 0;
 
   // Visual state tracking
-  private barStates: BarState[] = [];
+  private barStates = new Uint8Array(0);
   private activeRange: { lo: number; hi: number } | null = null;
   private rangeStack: { lo: number; hi: number }[] = [];
+  private isSorted = false;
+  private lastHighlightEvent: SortEvent | null = null;
 
   // Listeners
   private listeners: Set<StateListener> = new Set();
@@ -296,14 +306,20 @@ export class AnimationController {
         this.accumulatedTime -= eventsToProcess * msPerEvent;
 
         if (this.direction === "forward") {
-          // Forward playback (existing logic)
+          // Forward playback (apply visuals once per frame)
           const batch = this.engine.getNextEvents(eventsToProcess);
+          let lastEvent: SortEvent | null = null;
           for (const event of batch) {
-            this.applyEvent(event);
+            this.applyEventToArray(event);
             this.currentStep++;
+            lastEvent = event;
+          }
+          if (lastEvent) {
+            this.applyVisualState(lastEvent);
           }
         } else {
           // Backward playback
+          let appliedBackward = false;
           for (let i = 0; i < eventsToProcess && this.currentStep > 0; i++) {
             const targetStep = this.currentStep - 1;
             const event = this.engine.getEventAt(targetStep);
@@ -317,6 +333,9 @@ export class AnimationController {
 
             this.currentStep = targetStep;
             this.applyEventToArray(inverseEvent(event));
+            appliedBackward = true;
+          }
+          if (appliedBackward) {
             this.applyVisualStateForStep(this.currentStep);
           }
           this.engine.seek(this.currentStep);
@@ -393,34 +412,57 @@ export class AnimationController {
     }
   }
 
-  private applyVisualState(event: SortEvent): void {
-    // Reset all bar states to default first
-    this.barStates.fill("default");
+  private setBarState(index: number, state: BarState): void {
+    if (index < 0 || index >= this.barStates.length) return;
+    this.barStates[index] = state;
+  }
+
+  private clearHighlightForEvent(event: SortEvent | null): void {
+    if (!event) return;
 
     switch (event.type) {
       case "Compare":
-        this.barStates[event.i] = "comparing";
-        this.barStates[event.j] = "comparing";
-        break;
       case "Swap":
-        this.barStates[event.i] = "swapping";
-        this.barStates[event.j] = "swapping";
+        this.setBarState(event.i, BAR_STATE_DEFAULT);
+        this.setBarState(event.j, BAR_STATE_DEFAULT);
         break;
       case "Overwrite":
-        this.barStates[event.idx] = "writing";
-        break;
-      case "Done":
-        // Mark all as sorted
-        this.barStates.fill("sorted");
+        this.setBarState(event.idx, BAR_STATE_DEFAULT);
         break;
     }
+  }
+
+  private applyVisualState(event: SortEvent): void {
+    this.clearHighlightForEvent(this.lastHighlightEvent);
+    this.isSorted = false;
+
+    switch (event.type) {
+      case "Compare":
+        this.setBarState(event.i, BAR_STATE_COMPARING);
+        this.setBarState(event.j, BAR_STATE_COMPARING);
+        break;
+      case "Swap":
+        this.setBarState(event.i, BAR_STATE_SWAPPING);
+        this.setBarState(event.j, BAR_STATE_SWAPPING);
+        break;
+      case "Overwrite":
+        this.setBarState(event.idx, BAR_STATE_WRITING);
+        break;
+      case "Done":
+        this.isSorted = true;
+        break;
+    }
+
+    this.lastHighlightEvent = event;
   }
 
   private applyVisualStateForStep(step: number): void {
     if (!this.engine) return;
 
     if (step <= 0) {
-      this.barStates.fill("default");
+      this.clearHighlightForEvent(this.lastHighlightEvent);
+      this.lastHighlightEvent = null;
+      this.isSorted = false;
       return;
     }
 
@@ -428,7 +470,9 @@ export class AnimationController {
     if (event) {
       this.applyVisualState(event);
     } else {
-      this.barStates.fill("default");
+      this.clearHighlightForEvent(this.lastHighlightEvent);
+      this.lastHighlightEvent = null;
+      this.isSorted = false;
     }
   }
 
@@ -440,6 +484,7 @@ export class AnimationController {
       minValue: this.minValue,
       maxValue: this.maxValue,
       barStates: this.barStates,
+      isSorted: this.isSorted,
       activeRange: this.activeRange,
     };
 
@@ -448,9 +493,11 @@ export class AnimationController {
 
   private resetArrayState(array: number[]): void {
     this.array = [...array];
-    this.barStates = new Array(this.array.length).fill("default");
+    this.barStates = new Uint8Array(this.array.length);
     this.activeRange = null;
     this.rangeStack = [];
+    this.isSorted = false;
+    this.lastHighlightEvent = null;
   }
 
   private updateMinMax(array: number[]): void {

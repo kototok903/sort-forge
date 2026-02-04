@@ -1,32 +1,35 @@
-import type { IRenderer, RenderState, BarState } from "@/renderer/types";
+import {
+  BAR_STATE_DEFAULT,
+  BAR_STATE_SORTED,
+  type IRenderer,
+  type RenderState,
+  type BarState,
+} from "@/renderer/types";
 
 /** Bar state colors (fill, border, glow) - matches CSS --viz-* tokens */
-const COLORS: Record<
-  BarState,
-  { fill: string; border: string; glow?: string }
-> = {
-  default: { fill: "#5a5a62", border: "#4a4a52" },
-  comparing: {
+const COLORS: Array<{ fill: string; border: string; glow?: string }> = [
+  { fill: "#5a5a62", border: "#4a4a52" },
+  {
     fill: "#fbbf24",
     border: "#f59e0b",
     glow: "rgba(251, 191, 36, 0.4)",
   },
-  swapping: {
+  {
     fill: "#f97316",
     border: "#ea580c",
     glow: "rgba(249, 115, 22, 0.5)",
   },
-  writing: {
+  {
     fill: "#ef4444",
     border: "#dc2626",
     glow: "rgba(239, 68, 68, 0.5)",
   },
-  sorted: {
+  {
     fill: "#22d3ee",
     border: "#06b6d4",
     glow: "rgba(34, 211, 238, 0.3)",
   },
-};
+];
 
 /** Background color - matches --bg-base */
 const BG_COLOR = "#18181b";
@@ -93,7 +96,8 @@ export class CanvasRenderer implements IRenderer {
   render(state: RenderState): void {
     if (!this.canvas || !this.ctx) return;
 
-    const { array, barStates, activeRange, minValue, maxValue } = state;
+    const { array, barStates, activeRange, minValue, maxValue, isSorted } =
+      state;
     const width = this.width;
     const height = this.height;
 
@@ -126,8 +130,10 @@ export class CanvasRenderer implements IRenderer {
 
     // First pass: Draw bars with glow effects (active states only)
     for (let i = 0; i < array.length; i++) {
-      const barState = barStates[i] || "default";
-      const colors = COLORS[barState];
+      const barState = isSorted
+        ? BAR_STATE_SORTED
+        : ((barStates[i] ?? BAR_STATE_DEFAULT) as BarState);
+      const colors = COLORS[barState] ?? COLORS[BAR_STATE_DEFAULT];
 
       if (colors.glow) {
         const value = array[i];
@@ -150,8 +156,10 @@ export class CanvasRenderer implements IRenderer {
     // Second pass: Draw all bars
     for (let i = 0; i < array.length; i++) {
       const value = array[i];
-      const barState = barStates[i] || "default";
-      const colors = COLORS[barState];
+      const barState = isSorted
+        ? BAR_STATE_SORTED
+        : ((barStates[i] ?? BAR_STATE_DEFAULT) as BarState);
+      const colors = COLORS[barState] ?? COLORS[BAR_STATE_DEFAULT];
 
       // Calculate bar height
       const normalizedValue = (value - minValue) / valueRange;
