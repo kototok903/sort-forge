@@ -206,8 +206,8 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 
 - [ ] Add algorithm statistics display (comparisons, swaps, time)
 - [ ] Add array presets (random, nearly sorted, reversed, few unique)
-- [ ] Add sound option (optional, map events to tones)
-- [ ] Add multiple color themes
+- [x] Add sound option (selectable waveform: sine/triangle/square, volume control, persisted)
+- [x] Add multiple color themes (8 themes with full UI + canvas theming)
 - [ ] Improve mobile responsiveness
 
 ---
