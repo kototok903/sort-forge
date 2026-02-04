@@ -136,40 +136,6 @@
 
 /* Base Styles */
 
-/* Default to dark theme when no data-theme is set */
-html:not([data-theme]) {
-  /* Backgrounds (softer dark gray) */
-  --bg-base: #18181b;
-  --bg-surface: #1f1f23;
-  --bg-elevated: #27272a;
-  --bg-overlay: #303033;
-
-  /* Borders */
-  --border-subtle: #3f3f46;
-  --border-muted: #52525b;
-
-  /* Text (WCAG AA compliant) */
-  --text-primary: #ececef;
-  --text-secondary: #9898a0;
-  --text-muted: #6a6a72;
-
-  /* Accent */
-  --accent: #f59e0b;
-  --accent-hover: #fbbf24;
-
-  /* Visualization (heat scale) */
-  --viz-default: #5a5a62;
-  --viz-comparing: #fbbf24;
-  --viz-swapping: #f97316;
-  --viz-writing: #ef4444;
-  --viz-sorted: #22d3ee;
-
-  /* Semantic */
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --error: #ef4444;
-}
-
 html, body, #root {
   height: 100%;
   margin: 0;

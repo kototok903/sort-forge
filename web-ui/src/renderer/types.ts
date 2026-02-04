@@ -1,3 +1,5 @@
+import type { ThemeVizColors } from "@/themes/types";
+
 /**
  * Highlight types for overlay rendering.
  */
@@ -46,4 +48,7 @@ export interface IRenderer {
 
   /** Handle resize */
   resize(): void;
+
+  /** Set theme colors for visualization */
+  setTheme(colors: ThemeVizColors): void;
 }

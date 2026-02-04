@@ -264,6 +264,11 @@ export class AnimationController {
     this.notifyListeners();
   }
 
+  /** Force a re-render with current state (useful after theme changes) */
+  forceRender(): void {
+    this.render();
+  }
+
   /** Get current state */
   getState(): ControllerState {
     return {

@@ -5,6 +5,8 @@ import {
   LIVE_ARRAY_SIZE_MIN,
   LIVE_ARRAY_SIZE_MAX,
 } from "@/config";
+import { THEMES } from "@/themes/themes";
+import { THEME_IDS, type ThemeId } from "@/themes/types";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -13,10 +15,12 @@ interface SidebarProps {
   selectedAlgorithm: string;
   distribution: Distribution;
   arraySize: number;
+  themeId: ThemeId;
   onEngineTypeChange: (type: EngineType) => void;
   onAlgorithmChange: (algorithm: string) => void;
   onDistributionChange: (distribution: Distribution) => void;
   onArraySizeChange: (size: number) => void;
+  onThemeChange: (themeId: ThemeId) => void;
   onGenerate: () => void;
   disabled?: boolean;
 }
@@ -31,10 +35,12 @@ export function Sidebar({
   selectedAlgorithm,
   distribution,
   arraySize,
+  themeId,
   onEngineTypeChange,
   onAlgorithmChange,
   onDistributionChange,
   onArraySizeChange,
+  onThemeChange,
   onGenerate,
   disabled = false,
 }: SidebarProps) {
@@ -43,116 +49,137 @@ export function Sidebar({
   const sizeMax = isPregen ? PREGEN_ARRAY_SIZE_MAX : LIVE_ARRAY_SIZE_MAX;
 
   return (
-    <aside className={`sidebar ${isOpen ? "" : "collapsed"}`}>
-      {/* Engine Section */}
-      <div className="section-header">Engine</div>
+    <aside className={`sidebar flex flex-col ${isOpen ? "" : "collapsed"}`}>
+      {/* Top group - Engine and Array sections */}
+      <div className="flex-1">
+        {/* Engine Section */}
+        <div className="section-header">Engine</div>
 
-      <div className="flex flex-col gap-2 mb-4">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="engine"
-            checked={engineType === "pregen"}
-            onChange={() => onEngineTypeChange("pregen")}
-            disabled={disabled}
-            className="radio"
-          />
-          <span className="text-sm text-primary">Pregen (V1)</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            name="engine"
-            checked={engineType === "live"}
-            onChange={() => onEngineTypeChange("live")}
-            disabled={disabled}
-            className="radio"
-          />
-          <span className="text-sm text-primary">Live (V2)</span>
-        </label>
-      </div>
-
-      {/* Array Section */}
-      <div className="section-header">Array</div>
-
-      <div className="flex flex-col gap-3">
-        {/* Algorithm */}
-        <div className="form-group">
-          <label className="label">Algorithm</label>
-          <select
-            value={selectedAlgorithm}
-            onChange={(e) => onAlgorithmChange(e.target.value)}
-            disabled={disabled}
-            className="select w-full"
-          >
-            {algorithms.map((algo) => (
-              <option key={algo} value={algo}>
-                {formatAlgorithmName(algo)}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-2 mb-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="engine"
+              checked={engineType === "pregen"}
+              onChange={() => onEngineTypeChange("pregen")}
+              disabled={disabled}
+              className="radio"
+            />
+            <span className="text-sm text-primary">Pregen (V1)</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="engine"
+              checked={engineType === "live"}
+              onChange={() => onEngineTypeChange("live")}
+              disabled={disabled}
+              className="radio"
+            />
+            <span className="text-sm text-primary">Live (V2)</span>
+          </label>
         </div>
 
-        {/* Size - different controls for each engine */}
-        <div className="form-group">
-          <div className="flex items-center justify-between">
-            <label className="label">Size</label>
-            {isPregen && (
-              <span className="mono text-sm text-primary">{arraySize}</span>
+        {/* Array Section */}
+        <div className="section-header">Array</div>
+
+        <div className="flex flex-col gap-3">
+          {/* Algorithm */}
+          <div className="form-group">
+            <label className="label">Algorithm</label>
+            <select
+              value={selectedAlgorithm}
+              onChange={(e) => onAlgorithmChange(e.target.value)}
+              disabled={disabled}
+              className="select w-full"
+            >
+              {algorithms.map((algo) => (
+                <option key={algo} value={algo}>
+                  {formatAlgorithmName(algo)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Size - different controls for each engine */}
+          <div className="form-group">
+            <div className="flex items-center justify-between">
+              <label className="label">Size</label>
+              {isPregen && (
+                <span className="mono text-sm text-primary">{arraySize}</span>
+              )}
+            </div>
+            {isPregen ? (
+              <input
+                type="range"
+                min={sizeMin}
+                max={sizeMax}
+                value={arraySize}
+                onChange={(e) =>
+                  onArraySizeChange(parseInt(e.target.value, 10))
+                }
+                disabled={disabled}
+                className="slider"
+              />
+            ) : (
+              <input
+                type="number"
+                min={sizeMin}
+                max={sizeMax}
+                value={arraySize}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= sizeMin && val <= sizeMax) {
+                    onArraySizeChange(val);
+                  }
+                }}
+                disabled={disabled}
+                className="input w-full"
+              />
             )}
           </div>
-          {isPregen ? (
-            <input
-              type="range"
-              min={sizeMin}
-              max={sizeMax}
-              value={arraySize}
-              onChange={(e) => onArraySizeChange(parseInt(e.target.value, 10))}
-              disabled={disabled}
-              className="slider"
-            />
-          ) : (
-            <input
-              type="number"
-              min={sizeMin}
-              max={sizeMax}
-              value={arraySize}
-              onChange={(e) => {
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val) && val >= sizeMin && val <= sizeMax) {
-                  onArraySizeChange(val);
-                }
-              }}
-              disabled={disabled}
-              className="input w-full"
-            />
-          )}
-        </div>
 
-        {/* Distribution */}
-        <div className="form-group">
-          <label className="label">Distribution</label>
-          <select
-            value={distribution}
-            onChange={(e) =>
-              onDistributionChange(e.target.value as Distribution)
-            }
+          {/* Distribution */}
+          <div className="form-group">
+            <label className="label">Distribution</label>
+            <select
+              value={distribution}
+              onChange={(e) =>
+                onDistributionChange(e.target.value as Distribution)
+              }
+              disabled={disabled}
+              className="select w-full"
+            >
+              <option value="random">Random</option>
+              <option value="uniform">Uniform</option>
+            </select>
+          </div>
+
+          {/* Generate Button */}
+          <button
+            onClick={onGenerate}
             disabled={disabled}
-            className="select w-full"
+            className="btn btn-primary w-full mt-1"
           >
-            <option value="random">Random</option>
-            <option value="uniform">Uniform</option>
-          </select>
+            Generate
+          </button>
         </div>
+      </div>
 
-        {/* Generate Button */}
-        <button
-          onClick={onGenerate}
-          disabled={disabled}
-          className="btn btn-primary w-full mt-1"
+      {/* Bottom - Theme Section */}
+      <div className="pt-4">
+        <div className="section-header">Customization</div>
+        <select
+          value={themeId}
+          onChange={(e) => onThemeChange(e.target.value as ThemeId)}
+          className="select w-full"
         >
-          Generate
-        </button>
+          {THEME_IDS.map((id) => (
+            <option key={id} value={id}>
+              {THEMES[id].name}
+            </option>
+          ))}
+        </select>
       </div>
     </aside>
   );

@@ -30,6 +30,8 @@ import {
   SPEED_DEFAULT,
 } from "@/config";
 import { getIsModKey } from "@/utils";
+import { DEFAULT_THEME_ID, THEMES, applyTheme } from "@/themes/themes";
+import type { ThemeId } from "@/themes/types";
 
 function generateArray(size: number, distribution: Distribution): number[] {
   switch (distribution) {
@@ -68,7 +70,8 @@ function App() {
   const [liveAlgorithms, setLiveAlgorithms] = useState<string[]>([]);
 
   // Current algorithms based on engine type
-  const algorithms = engineType === "pregen" ? pregenAlgorithms : liveAlgorithms;
+  const algorithms =
+    engineType === "pregen" ? pregenAlgorithms : liveAlgorithms;
 
   const [selectedAlgorithm, setSelectedAlgorithm] = useState("");
   const [arraySize, setArraySize] = useState(PREGEN_ARRAY_SIZE_DEFAULT);
@@ -87,6 +90,9 @@ function App() {
 
   // Loading state
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Theme state
+  const [themeId, setThemeId] = useState<ThemeId>(DEFAULT_THEME_ID);
 
   // Create stable instances of renderer and controller
   const renderer = useMemo(() => new CanvasRenderer(), []);
@@ -124,7 +130,12 @@ function App() {
   // Auto-generate on initial load
   const [hasInitialized, setHasInitialized] = useState(false);
   useEffect(() => {
-    if (wasmReady && pregenAlgorithms.length > 0 && selectedAlgorithm && !hasInitialized) {
+    if (
+      wasmReady &&
+      pregenAlgorithms.length > 0 &&
+      selectedAlgorithm &&
+      !hasInitialized
+    ) {
       setHasInitialized(true);
       const array = generateArray(arraySize, distribution);
       const engine = new PregenEngine();
@@ -139,6 +150,14 @@ function App() {
     distribution,
     controller,
   ]);
+
+  // Apply theme when it changes
+  useEffect(() => {
+    const theme = THEMES[themeId];
+    applyTheme(theme);
+    renderer.setTheme(theme.viz);
+    controller.forceRender();
+  }, [themeId, renderer, controller]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -194,15 +213,20 @@ function App() {
   }, [controller, controllerState.playbackState, controllerState.speed]);
 
   // Handle engine type change
-  const handleEngineTypeChange = useCallback((type: EngineType) => {
-    setEngineType(type);
-    const algos = type === "pregen" ? pregenAlgorithms : liveAlgorithms;
-    if (algos.length > 0 && !algos.includes(selectedAlgorithm)) {
-      setSelectedAlgorithm(algos[0]);
-    }
-    // Reset array size to appropriate default
-    setArraySize(type === "pregen" ? PREGEN_ARRAY_SIZE_DEFAULT : LIVE_ARRAY_SIZE_DEFAULT);
-  }, [pregenAlgorithms, liveAlgorithms, selectedAlgorithm]);
+  const handleEngineTypeChange = useCallback(
+    (type: EngineType) => {
+      setEngineType(type);
+      const algos = type === "pregen" ? pregenAlgorithms : liveAlgorithms;
+      if (algos.length > 0 && !algos.includes(selectedAlgorithm)) {
+        setSelectedAlgorithm(algos[0]);
+      }
+      // Reset array size to appropriate default
+      setArraySize(
+        type === "pregen" ? PREGEN_ARRAY_SIZE_DEFAULT : LIVE_ARRAY_SIZE_DEFAULT
+      );
+    },
+    [pregenAlgorithms, liveAlgorithms, selectedAlgorithm]
+  );
 
   // Generate and start sort
   const handleGenerate = useCallback(async () => {
@@ -211,7 +235,8 @@ function App() {
     setIsGenerating(true);
     try {
       const array = generateArray(arraySize, distribution);
-      const engine = engineType === "pregen" ? new PregenEngine() : new LiveEngine();
+      const engine =
+        engineType === "pregen" ? new PregenEngine() : new LiveEngine();
       await controller.initialize(engine, selectedAlgorithm, array);
     } catch (err) {
       console.error("Failed to initialize sort:", err);
@@ -291,10 +316,12 @@ function App() {
           selectedAlgorithm={selectedAlgorithm}
           distribution={distribution}
           arraySize={arraySize}
+          themeId={themeId}
           onEngineTypeChange={handleEngineTypeChange}
           onAlgorithmChange={setSelectedAlgorithm}
           onDistributionChange={setDistribution}
           onArraySizeChange={setArraySize}
+          onThemeChange={setThemeId}
           onGenerate={handleGenerate}
           disabled={isGenerating}
         />
