@@ -9,6 +9,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 1: Project Setup & Foundation
 
 ### 1.1 Initialize Project Structure
+
 - [x] Create `rust-core/` directory with Cargo workspace
 - [x] Create `web-ui/` directory with Vite + React + TypeScript
 - [x] Configure `wasm-pack` and `wasm-bindgen` in Rust
@@ -16,6 +17,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 - [x] Configure Vite to load `.wasm` modules
 
 ### 1.2 Define Shared Types
+
 - [x] Create `events.rs` with `SortEvent` enum:
   - `Swap(usize, usize)`
   - `Overwrite { idx, old_val, new_val }`
@@ -31,6 +33,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 2: V1 Engine (Pregeneration)
 
 ### 2.1 Rust - Pregeneration Module
+
 - [x] Create `pregen/mod.rs` with trait for pregeneration algorithms
 - [x] Implement `pregen/bubble_sort.rs` - standard bubble sort with event emission
 - [x] Implement `pregen/quicksort.rs` - standard quicksort with event emission
@@ -40,6 +43,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 - [x] Add unit tests for event correctness
 
 ### 2.2 TypeScript - Pregen Engine Wrapper
+
 - [x] Create `engines/PregenEngine.ts` implementing `ISortEngine` interface
 - [x] Load Wasm module and call pregeneration function
 - [x] Store full event list in memory
@@ -50,6 +54,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 3: Core UI & Rendering
 
 ### 3.1 Canvas Renderer
+
 - [x] Create `renderer/CanvasRenderer.ts` with `IRenderer` interface
 - [x] Implement bar drawing (height = value, width = canvas_width / array_length)
 - [x] Implement color states:
@@ -60,6 +65,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 - [x] Handle range visualization (optional dimming/highlighting of subarrays)
 
 ### 3.2 Animation Controller
+
 - [x] Create `controller/AnimationController.ts` with `requestAnimationFrame` loop
 - [x] Implement playback controls:
   - Play / Pause
@@ -69,6 +75,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 - [x] Connect controller to renderer
 
 ### 3.3 Basic UI (React Components)
+
 - [x] Create React components:
   - `<App />` - main container
   - `<Canvas />` - canvas element with ref
@@ -82,6 +89,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 4: Time Travel (V1)
 
 ### 4.1 Forward/Backward Playback
+
 - [ ] Implement circular buffer in TypeScript for recent events (defer)
 - [x] Implement inverse event application:
   - `Swap(a, b)` → `Swap(a, b)` (self-inverse)
@@ -94,6 +102,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 5: V2 Engine (State Machine)
 
 ### 5.1 Rust - State Machine Module
+
 - [x] Create `live/mod.rs` with `Stepper` trait:
   ```rust
   trait Stepper {
@@ -112,6 +121,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 - [x] Add `get_live_algorithms()` function
 
 ### 5.2 TypeScript - Live Engine Wrapper
+
 - [x] Create `engines/LiveEngine.ts` implementing `ISortEngine` interface
 - [x] Manage stepper lifecycle (create, free, reset)
 - [x] Request batches on-demand during animation
@@ -123,20 +133,21 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 6: Engine Abstraction & Switching
 
 ### 6.1 Unified Engine Interface
+
 - [x] Define `ISortEngine` interface in TypeScript:
   ```typescript
   interface ISortEngine {
-      readonly name: string;
-      readonly canSeek: boolean;
-      initialize(algorithm: string, array: number[]): Promise<void>;
-      getNextEvents(count: number): SortEvent[];
-      getAllEvents(): SortEvent[];
-      getEventAt(index: number): SortEvent | null;
-      getTotalEvents(): number;
-      getCurrentPosition(): number;
-      seek(position: number): void;
-      reset(): void;
-      isDone(): boolean;
+    readonly name: string;
+    readonly canSeek: boolean;
+    initialize(algorithm: string, array: number[]): Promise<void>;
+    getNextEvents(count: number): SortEvent[];
+    getAllEvents(): SortEvent[];
+    getEventAt(index: number): SortEvent | null;
+    getTotalEvents(): number;
+    getCurrentPosition(): number;
+    seek(position: number): void;
+    reset(): void;
+    isDone(): boolean;
   }
   ```
 - [x] Update controller to use `ISortEngine` abstraction
@@ -149,6 +160,7 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 7: Additional Algorithms
 
 ### 7.1 V1 Implementations (20 algorithms complete)
+
 - [x] Bubble sort
 - [x] Selection sort
 - [x] Insertion sort
@@ -171,11 +183,13 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 - [x] Bitonic sort
 
 ### 7.2 V2 Implementations (State Machines)
+
 - [x] Bubble sort
-- [x] QuickSort (LL - Lomuto)
-- [ ] Merge sort (iterative bottom-up or explicit stack)
-- [ ] Insertion sort
 - [ ] Selection sort
+- [ ] Insertion sort
+- [x] QuickSort (LL - Lomuto)
+- [ ] QuickSort (LR - Hoare)
+- [ ] Merge sort (iterative bottom-up or explicit stack)
 - [ ] Heap sort
 
 ---
@@ -183,14 +197,17 @@ This plan outlines the phased implementation of a dual-mode sorting algorithm vi
 ## Phase 8: Polish & Optimization
 
 ### 8.1 Performance
+
 - [ ] Profile Canvas rendering for large arrays
 - [ ] Optimize event batch sizes
 - [ ] Add seek checkpoints for timeline scrubbing to avoid replay-from-start (defer)
 
 ### 8.2 UX Enhancements
+
 - [ ] Add algorithm statistics display (comparisons, swaps, time)
 - [ ] Add array presets (random, nearly sorted, reversed, few unique)
 - [ ] Add sound option (optional, map events to tones)
+- [ ] Add multiple color themes
 - [ ] Improve mobile responsiveness
 
 ---
@@ -208,6 +225,7 @@ These are nice-to-haves for later iterations:
 ## Technical Decisions & Notes
 
 ### Build Commands
+
 ```bash
 # Rust → Wasm
 cd rust-core && wasm-pack build --target web --release
@@ -220,12 +238,14 @@ cd web-ui && npm run build
 ```
 
 ### Key Architectural Boundaries
+
 1. **Rust knows nothing about rendering** - only emits semantic events
 2. **TypeScript owns timing/animation** - Rust has no concept of "speed"
 3. **Events are invertible** - all state changes can be undone
 4. **Engines are swappable** - controller doesn't know V1 vs V2
 
 ### Memory Considerations
+
 - V1: O(N²) events stored for full sort (limit to ~256 elements in UI)
 - V2: O(N) array + sliding buffer (~1200 events) for smooth playback (suitable for 100k+ elements)
 - V2 sliding buffer: 3 batches × 200 events in each direction from current position
