@@ -2,13 +2,13 @@ export type EngineType = "pregen" | "live";
 export const ENGINE_DEFAULT: EngineType = "pregen";
 
 // V1 Pregen engine limits
-export const PREGEN_ARRAY_SIZE_MIN = 5;
-export const PREGEN_ARRAY_SIZE_MAX = 256;
+export const PREGEN_ARRAY_SIZE_MIN = 4;
+export const PREGEN_ARRAY_SIZE_MAX = 1024;
 export const PREGEN_ARRAY_SIZE_DEFAULT = 128;
 
 // V2 Live engine limits
-export const LIVE_ARRAY_SIZE_MIN = 5;
-export const LIVE_ARRAY_SIZE_MAX = 100000;
+export const LIVE_ARRAY_SIZE_MIN = 4;
+export const LIVE_ARRAY_SIZE_MAX = 1048576;
 export const LIVE_ARRAY_SIZE_DEFAULT = 1000;
 
 // Generic constants (use pregen values for backwards compatibility)
