@@ -3,10 +3,10 @@ import { DEFAULT_THEME_ID, THEMES } from "@/themes/themes";
 import type { ThemeVizColors } from "@/themes/types";
 
 /** Padding */
-const PADDING_TOP = 0;
+const PADDING_TOP = 7;
 const PADDING_BOTTOM = 0;
-const PADDING_LEFT = 0;
-const PADDING_RIGHT = 0;
+const PADDING_LEFT = 7;
+const PADDING_RIGHT = 7;
 
 /** Gap sizing for bars */
 const BAR_BORDER_WIDTH = 1;
