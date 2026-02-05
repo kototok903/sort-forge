@@ -106,8 +106,8 @@
 
 :root {
   /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
@@ -136,7 +136,9 @@
 
 /* Base Styles */
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -158,20 +160,12 @@ body {
   height: var(--header-height);
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-4);
 }
 
 .footer {
   height: var(--footer-height);
   background: var(--bg-surface);
   border-top: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  padding: 0 var(--space-5);
-  gap: var(--space-4);
 }
 
 .sidebar {
@@ -181,7 +175,10 @@ body {
   padding: var(--space-4);
   overflow-y: auto;
   flex-shrink: 0;
-  transition: width 150ms ease, padding 150ms ease, opacity 150ms ease;
+  transition:
+    width 150ms ease,
+    padding 150ms ease,
+    opacity 150ms ease;
 }
 
 .sidebar.collapsed {
@@ -329,6 +326,7 @@ body {
   background: var(--bg-overlay);
   cursor: pointer;
   min-width: 60px;
+  margin: var(--space-1) 0;
 }
 
 .slider::-webkit-slider-thumb {
@@ -366,6 +364,7 @@ body {
 }
 
 /* Timeline slider - wider track */
+
 .slider-timeline {
   height: 6px;
   border-radius: 3px;
@@ -451,4 +450,3 @@ body {
   accent-color: var(--accent);
   cursor: pointer;
 }
-

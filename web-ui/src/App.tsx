@@ -71,13 +71,9 @@ function App() {
   const algorithms =
     engineType === "pregen" ? pregenAlgorithms : liveAlgorithms;
   const selectedAlgorithm =
-    engineType === "pregen"
-      ? settings.pregenAlgorithm
-      : settings.liveAlgorithm;
+    engineType === "pregen" ? settings.pregenAlgorithm : settings.liveAlgorithm;
   const arraySize =
-    engineType === "pregen"
-      ? settings.pregenArraySize
-      : settings.liveArraySize;
+    engineType === "pregen" ? settings.pregenArraySize : settings.liveArraySize;
 
   // Controller state (synced from AnimationController)
   const [controllerState, setControllerState] = useState<ControllerState>({
@@ -165,59 +161,6 @@ function App() {
       controller.initSound();
     }
   }, [settings.soundWaveform, settings.soundVolume, controller]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLSelectElement
-      ) {
-        return;
-      }
-
-      switch (e.code) {
-        case "Space":
-          e.preventDefault();
-          if (controllerState.playbackState === "playing") {
-            controller.pause();
-          } else if (e.shiftKey) {
-            controller.playBackward();
-          } else {
-            controller.play();
-          }
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-          controller.stepForward();
-          break;
-        case "ArrowLeft":
-          e.preventDefault();
-          controller.stepBackward();
-          break;
-        case "KeyR":
-          if (!getIsModKey(e)) {
-            e.preventDefault();
-            controller.reset();
-          }
-          break;
-        case "Equal":
-        case "NumpadAdd":
-          e.preventDefault();
-          controller.setSpeed(Math.min(10, controllerState.speed + 0.5));
-          break;
-        case "Minus":
-        case "NumpadSubtract":
-          e.preventDefault();
-          controller.setSpeed(Math.max(0.1, controllerState.speed - 0.5));
-          break;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [controller, controllerState.playbackState, controllerState.speed]);
 
   // Handle engine type change
   const handleEngineTypeChange = useCallback(
@@ -343,6 +286,68 @@ function App() {
   const handleToggleSidebar = useCallback(() => {
     setSettings({ sidebarOpen: !settings.sidebarOpen });
   }, [settings.sidebarOpen, setSettings]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      switch (e.code) {
+        case "Space":
+          e.preventDefault();
+          if (controllerState.playbackState === "playing") {
+            controller.pause();
+          } else if (e.shiftKey) {
+            controller.playBackward();
+          } else {
+            controller.play();
+          }
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          controller.stepForward();
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          controller.stepBackward();
+          break;
+        case "KeyR":
+          if (!getIsModKey(e)) {
+            e.preventDefault();
+            controller.reset();
+          }
+          break;
+        case "Equal":
+        case "NumpadAdd":
+          e.preventDefault();
+          controller.setSpeed(Math.min(10, controllerState.speed + 0.5));
+          break;
+        case "Minus":
+        case "NumpadSubtract":
+          e.preventDefault();
+          controller.setSpeed(Math.max(0.1, controllerState.speed - 0.5));
+          break;
+        case "KeyG":
+          e.preventDefault();
+          handleGenerate();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    controller,
+    controllerState.playbackState,
+    controllerState.speed,
+    handleGenerate,
+  ]);
 
   // Show loading state
   if (!wasmReady) {

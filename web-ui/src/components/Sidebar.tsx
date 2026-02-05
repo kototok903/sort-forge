@@ -171,6 +171,8 @@ export function Sidebar({
           {/* Generate Button */}
           <button
             onClick={onGenerate}
+            title="Generate new array (G)"
+            aria-label="Generate new array"
             disabled={disabled}
             className="btn btn-primary w-full mt-1"
           >

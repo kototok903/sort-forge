@@ -8,7 +8,7 @@ interface HeaderProps {
  */
 export function Header({ sidebarOpen, onToggleSidebar }: HeaderProps) {
   return (
-    <header className="header">
+    <header className="header flex items-center justify-between gap-3 px-3">
       <h1 className="text-lg font-semibold tracking-tight">SortForge</h1>
 
       <div className="flex items-center gap-1">

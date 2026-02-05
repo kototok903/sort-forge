@@ -44,13 +44,17 @@ export function Controls({
   const isPlaying = playbackState === "playing";
   const isPlayingForward = isPlaying && direction === "forward";
   const isPlayingBackward = isPlaying && direction === "backward";
-  const canPlayForward = canSeek ? currentStep < totalSteps : playbackState !== "done";
+  const canPlayForward = canSeek
+    ? currentStep < totalSteps
+    : playbackState !== "done";
   const canPlayBackward = currentStep > 0;
-  const canStepForward = canSeek ? currentStep < totalSteps : playbackState !== "done";
+  const canStepForward = canSeek
+    ? currentStep < totalSteps
+    : playbackState !== "done";
   const canStepBackward = currentStep > 0;
 
   return (
-    <footer className="footer">
+    <footer className="footer flex items-center gap-4 px-3">
       {/* Playback buttons */}
       <div className="flex items-center gap-1">
         <button
@@ -148,11 +152,10 @@ export function Controls({
           step={SPEED_STEP}
           value={speed}
           onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
-          className="slider"
-          style={{ width: "80px" }}
+          className="slider w-30"
           aria-label="Speed"
         />
-        <span className="mono text-sm text-primary min-w-[4ch] text-right">
+        <span className="mono text-sm text-primary min-w-[5ch] text-right">
           {speed.toFixed(1)}x
         </span>
       </div>
