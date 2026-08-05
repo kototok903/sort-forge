@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://sort-forge.vercel.app/sitemap.xml
+Sitemap: https://sort-forge.kototok.dev/sitemap.xml
