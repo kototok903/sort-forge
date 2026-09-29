@@ -4,15 +4,15 @@
 //! heapsort when the recursion depth exceeds a level based on log(n).
 //! Falls back to insertion sort for small subarrays. Used in C++ STL.
 
-use crate::events::SortEvent;
 use super::PregenSort;
+use crate::events::SortEvent;
 
-pub struct IntroSort;
+pub struct Introsort;
 
 /// Threshold for switching to insertion sort.
 const INSERTION_THRESHOLD: usize = 16;
 
-impl PregenSort for IntroSort {
+impl PregenSort for Introsort {
     fn sort(array: &mut [i32]) -> Vec<SortEvent> {
         let mut events = Vec::new();
         let n = array.len();
@@ -201,21 +201,30 @@ fn sift_down(array: &mut [i32], base: usize, root: usize, end: usize, events: &m
         let mut largest = current;
 
         if left < end {
-            events.push(SortEvent::Compare { i: base + largest, j: base + left });
+            events.push(SortEvent::Compare {
+                i: base + largest,
+                j: base + left,
+            });
             if array[base + left] > array[base + largest] {
                 largest = left;
             }
         }
 
         if right < end {
-            events.push(SortEvent::Compare { i: base + largest, j: base + right });
+            events.push(SortEvent::Compare {
+                i: base + largest,
+                j: base + right,
+            });
             if array[base + right] > array[base + largest] {
                 largest = right;
             }
         }
 
         if largest != current {
-            events.push(SortEvent::Swap { i: base + current, j: base + largest });
+            events.push(SortEvent::Swap {
+                i: base + current,
+                j: base + largest,
+            });
             array.swap(base + current, base + largest);
             current = largest;
         } else {
@@ -229,72 +238,78 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_intro_sort_basic() {
+    fn test_introsort_basic() {
         let mut array = vec![5, 3, 8, 4, 2];
-        let events = IntroSort::sort(&mut array);
+        let events = Introsort::sort(&mut array);
 
         assert_eq!(array, vec![2, 3, 4, 5, 8]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));
     }
 
     #[test]
-    fn test_intro_sort_already_sorted() {
+    fn test_introsort_already_sorted() {
         let mut array = vec![1, 2, 3, 4, 5];
-        IntroSort::sort(&mut array);
+        Introsort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
-    fn test_intro_sort_reverse() {
+    fn test_introsort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        IntroSort::sort(&mut array);
+        Introsort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
-    fn test_intro_sort_empty() {
+    fn test_introsort_empty() {
         let mut array: Vec<i32> = vec![];
-        let events = IntroSort::sort(&mut array);
+        let events = Introsort::sort(&mut array);
 
         assert!(array.is_empty());
         assert!(matches!(events.last(), Some(SortEvent::Done)));
     }
 
     #[test]
-    fn test_intro_sort_single() {
+    fn test_introsort_single() {
         let mut array = vec![42];
-        let events = IntroSort::sort(&mut array);
+        let events = Introsort::sort(&mut array);
 
         assert_eq!(array, vec![42]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));
     }
 
     #[test]
-    fn test_intro_sort_large() {
+    fn test_introsort_large() {
         let mut array: Vec<i32> = (0..100).rev().collect();
-        IntroSort::sort(&mut array);
+        Introsort::sort(&mut array);
 
         let expected: Vec<i32> = (0..100).collect();
         assert_eq!(array, expected);
     }
 
     #[test]
-    fn test_intro_sort_duplicates() {
+    fn test_introsort_duplicates() {
         let mut array = vec![3, 1, 3, 2, 1];
-        IntroSort::sort(&mut array);
+        Introsort::sort(&mut array);
 
         assert_eq!(array, vec![1, 1, 2, 3, 3]);
     }
 
     #[test]
-    fn test_intro_sort_uses_range_events() {
+    fn test_introsort_uses_range_events() {
         let mut array: Vec<i32> = (0..50).rev().collect();
-        let events = IntroSort::sort(&mut array);
+        let events = Introsort::sort(&mut array);
 
-        let enter_count = events.iter().filter(|e| matches!(e, SortEvent::EnterRange { .. })).count();
-        let exit_count = events.iter().filter(|e| matches!(e, SortEvent::ExitRange { .. })).count();
+        let enter_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::EnterRange { .. }))
+            .count();
+        let exit_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::ExitRange { .. }))
+            .count();
 
         assert!(enter_count > 0);
         assert_eq!(enter_count, exit_count);

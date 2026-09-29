@@ -244,6 +244,7 @@ export function Sidebar({
 const SPECIAL_ALGORITHM_NAMES: Record<string, string> = {
   quicksort_ll: "Quicksort (LL)",
   quicksort_lr: "Quicksort (LR)",
+  introsort: "Introsort",
   radix_lsd: "Radix LSD Sort",
   radix_msd: "Radix MSD Sort",
 };

@@ -13,7 +13,7 @@ pub mod cycle_sort;
 pub mod gnome_sort;
 pub mod heap_sort;
 pub mod insertion_sort;
-pub mod intro_sort;
+pub mod introsort;
 pub mod merge_sort;
 pub mod odd_even_sort;
 pub mod pancake_sort;
@@ -79,7 +79,7 @@ impl Algorithm {
             Algorithm::MergeSort => "merge",
             Algorithm::HeapSort => "heap",
             Algorithm::Timsort => "timsort",
-            Algorithm::IntroSort => "intro",
+            Algorithm::IntroSort => "introsort",
             Algorithm::RadixLsd => "radix_lsd",
             Algorithm::RadixMsd => "radix_msd",
             Algorithm::Bitonic => "bitonic",
@@ -162,7 +162,7 @@ pub fn pregen_sort(algorithm: Algorithm, array: &mut [i32]) -> Vec<SortEvent> {
         Algorithm::MergeSort => merge_sort::MergeSort::sort(array),
         Algorithm::HeapSort => heap_sort::HeapSort::sort(array),
         Algorithm::Timsort => timsort::Timsort::sort(array),
-        Algorithm::IntroSort => intro_sort::IntroSort::sort(array),
+        Algorithm::IntroSort => introsort::Introsort::sort(array),
         Algorithm::RadixLsd => radix_lsd_sort::RadixLsdSort::sort(array),
         Algorithm::RadixMsd => radix_msd_sort::RadixMsdSort::sort(array),
         Algorithm::Bitonic => bitonic_sort::BitonicSort::sort(array),
