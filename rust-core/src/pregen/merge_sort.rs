@@ -3,8 +3,17 @@
 //! Classic divide-and-conquer algorithm with O(n log n) time complexity.
 //! Uses EnterRange/ExitRange events to visualize the recursive structure.
 
-use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 use super::PregenSort;
+use crate::events::{ArrayId, ElementRef, SortEvent, MAIN_ARRAY_ID};
+
+const AUX_ARRAY_ID: ArrayId = 1;
+
+fn auxiliary(idx: usize) -> ElementRef {
+    ElementRef {
+        arr_id: AUX_ARRAY_ID,
+        idx,
+    }
+}
 
 pub struct MergeSort;
 
@@ -19,8 +28,24 @@ impl PregenSort for MergeSort {
         }
 
         let mut aux = array.to_vec();
+        events.push(SortEvent::AddArray {
+            arr_id: AUX_ARRAY_ID,
+            length: n,
+        });
+        // The clone initializes actual storage; expose each initialization write.
+        for (idx, &value) in array.iter().enumerate() {
+            events.push(SortEvent::Copy {
+                src: ElementRef::main(idx),
+                dest: auxiliary(idx),
+                old_val: None,
+                new_val: Some(value),
+            });
+        }
         merge_sort_recursive(array, &mut aux, 0, n - 1, &mut events);
 
+        events.push(SortEvent::RemoveArray {
+            arr_id: AUX_ARRAY_ID,
+        });
         events.push(SortEvent::Done);
         events
     }
@@ -69,70 +94,113 @@ fn merge(
     hi: usize,
     events: &mut Vec<SortEvent>,
 ) {
-    // Copy to auxiliary array
-    for i in lo..=hi {
-        aux[i] = array[i];
+    events.push(SortEvent::EnterRange {
+        arr_id: AUX_ARRAY_ID,
+        lo,
+        hi,
+    });
+    for idx in lo..=hi {
+        events.push(SortEvent::Copy {
+            src: ElementRef::main(idx),
+            dest: auxiliary(idx),
+            old_val: Some(aux[idx]),
+            new_val: Some(array[idx]),
+        });
+        aux[idx] = array[idx];
     }
 
     let mut i = lo;
     let mut j = mid + 1;
-
     for k in lo..=hi {
-        if i > mid {
-            // Left half exhausted, take from right
-            if array[k] != aux[j] {
-                events.push(SortEvent::Overwrite {
-                    dest: ElementRef::main(k),
-                    old_val: Some(array[k]),
-                    new_val: Some(aux[j]),
-                });
-            }
-            array[k] = aux[j];
+        let src = if i > mid {
+            let idx = j;
             j += 1;
+            idx
         } else if j > hi {
-            // Right half exhausted, take from left
-            if array[k] != aux[i] {
-                events.push(SortEvent::Overwrite {
-                    dest: ElementRef::main(k),
-                    old_val: Some(array[k]),
-                    new_val: Some(aux[i]),
-                });
-            }
-            array[k] = aux[i];
+            let idx = i;
             i += 1;
+            idx
         } else {
             events.push(SortEvent::Compare {
-                i: ElementRef::main(i),
-                j: ElementRef::main(j),
+                i: auxiliary(i),
+                j: auxiliary(j),
             });
             if aux[i] <= aux[j] {
-                if array[k] != aux[i] {
-                    events.push(SortEvent::Overwrite {
-                        dest: ElementRef::main(k),
-                        old_val: Some(array[k]),
-                        new_val: Some(aux[i]),
-                    });
-                }
-                array[k] = aux[i];
+                let idx = i;
                 i += 1;
+                idx
             } else {
-                if array[k] != aux[j] {
-                    events.push(SortEvent::Overwrite {
-                        dest: ElementRef::main(k),
-                        old_val: Some(array[k]),
-                        new_val: Some(aux[j]),
-                    });
-                }
-                array[k] = aux[j];
+                let idx = j;
                 j += 1;
+                idx
             }
-        }
+        };
+        // Equal-value transfers are still real writes.
+        events.push(SortEvent::Copy {
+            src: auxiliary(src),
+            dest: ElementRef::main(k),
+            old_val: Some(array[k]),
+            new_val: Some(aux[src]),
+        });
+        array[k] = aux[src];
     }
+    events.push(SortEvent::ExitRange {
+        arr_id: AUX_ARRAY_ID,
+        lo,
+        hi,
+    });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn buffer_lifetime_and_equal_value_copies_are_recorded() {
+        let mut array = [1, 1];
+        let events = MergeSort::sort(&mut array);
+        assert_eq!(
+            events.first(),
+            Some(&SortEvent::AddArray {
+                arr_id: AUX_ARRAY_ID,
+                length: 2
+            })
+        );
+        assert_eq!(
+            events[events.len() - 2],
+            SortEvent::RemoveArray {
+                arr_id: AUX_ARRAY_ID
+            }
+        );
+        assert_eq!(
+            events
+                .iter()
+                .filter(|e| matches!(e, SortEvent::Copy { .. }))
+                .count(),
+            6
+        );
+        assert_eq!(
+            events
+                .iter()
+                .filter(|e| matches!(
+                    e,
+                    SortEvent::Copy {
+                        old_val: Some(1),
+                        new_val: Some(1),
+                        ..
+                    }
+                ))
+                .count(),
+            4
+        );
+        assert!(events.iter().any(|e| matches!(e, SortEvent::Compare { i, j } if i.arr_id == AUX_ARRAY_ID && j.arr_id == AUX_ARRAY_ID)));
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, SortEvent::Overwrite { .. })));
+        for input in [vec![], vec![1]] {
+            assert_eq!(MergeSort::sort(&mut input.clone()), vec![SortEvent::Done]);
+        }
+    }
 
     #[test]
     fn test_merge_sort_basic() {
@@ -182,8 +250,14 @@ mod tests {
         let mut array = vec![3, 1, 4, 1, 5];
         let events = MergeSort::sort(&mut array);
 
-        let enter_count = events.iter().filter(|e| matches!(e, SortEvent::EnterRange { .. })).count();
-        let exit_count = events.iter().filter(|e| matches!(e, SortEvent::ExitRange { .. })).count();
+        let enter_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::EnterRange { .. }))
+            .count();
+        let exit_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::ExitRange { .. }))
+            .count();
 
         assert!(enter_count > 0);
         assert_eq!(enter_count, exit_count);
