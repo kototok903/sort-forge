@@ -3,7 +3,7 @@
 //! Sorts by repeatedly flipping (reversing) prefixes of the array.
 //! The only allowed operation is a "flip" which reverses elements from 0 to k.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct PancakeSort;
@@ -23,7 +23,10 @@ impl PregenSort for PancakeSort {
             // Find index of maximum element in array[0..size]
             let mut max_idx = 0;
             for i in 1..size {
-                events.push(SortEvent::Compare { i: max_idx, j: i });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(max_idx),
+                    j: ElementRef::main(i),
+                });
                 if array[i] > array[max_idx] {
                     max_idx = i;
                 }
@@ -54,7 +57,10 @@ fn flip(array: &mut [i32], k: usize, events: &mut Vec<SortEvent>) {
     let mut right = k;
 
     while left < right {
-        events.push(SortEvent::Swap { i: left, j: right });
+        events.push(SortEvent::Swap {
+            i: ElementRef::main(left),
+            j: ElementRef::main(right),
+        });
         array.swap(left, right);
         left += 1;
         right -= 1;

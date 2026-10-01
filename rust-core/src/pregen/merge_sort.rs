@@ -3,7 +3,7 @@
 //! Classic divide-and-conquer algorithm with O(n log n) time complexity.
 //! Uses EnterRange/ExitRange events to visualize the recursive structure.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 use super::PregenSort;
 
 pub struct MergeSort;
@@ -37,7 +37,11 @@ fn merge_sort_recursive(
         return;
     }
 
-    events.push(SortEvent::EnterRange { lo, hi });
+    events.push(SortEvent::EnterRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi,
+    });
 
     let mid = lo + (hi - lo) / 2;
 
@@ -50,7 +54,11 @@ fn merge_sort_recursive(
     // Merge the two halves
     merge(array, aux, lo, mid, hi, events);
 
-    events.push(SortEvent::ExitRange { lo, hi });
+    events.push(SortEvent::ExitRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi,
+    });
 }
 
 fn merge(
@@ -74,9 +82,9 @@ fn merge(
             // Left half exhausted, take from right
             if array[k] != aux[j] {
                 events.push(SortEvent::Overwrite {
-                    idx: k,
-                    old_val: array[k],
-                    new_val: aux[j],
+                    dest: ElementRef::main(k),
+                    old_val: Some(array[k]),
+                    new_val: Some(aux[j]),
                 });
             }
             array[k] = aux[j];
@@ -85,21 +93,24 @@ fn merge(
             // Right half exhausted, take from left
             if array[k] != aux[i] {
                 events.push(SortEvent::Overwrite {
-                    idx: k,
-                    old_val: array[k],
-                    new_val: aux[i],
+                    dest: ElementRef::main(k),
+                    old_val: Some(array[k]),
+                    new_val: Some(aux[i]),
                 });
             }
             array[k] = aux[i];
             i += 1;
         } else {
-            events.push(SortEvent::Compare { i, j });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(i),
+                j: ElementRef::main(j),
+            });
             if aux[i] <= aux[j] {
                 if array[k] != aux[i] {
                     events.push(SortEvent::Overwrite {
-                        idx: k,
-                        old_val: array[k],
-                        new_val: aux[i],
+                        dest: ElementRef::main(k),
+                        old_val: Some(array[k]),
+                        new_val: Some(aux[i]),
                     });
                 }
                 array[k] = aux[i];
@@ -107,9 +118,9 @@ fn merge(
             } else {
                 if array[k] != aux[j] {
                     events.push(SortEvent::Overwrite {
-                        idx: k,
-                        old_val: array[k],
-                        new_val: aux[j],
+                        dest: ElementRef::main(k),
+                        old_val: Some(array[k]),
+                        new_val: Some(aux[j]),
                     });
                 }
                 array[k] = aux[j];

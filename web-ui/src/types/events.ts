@@ -1,96 +1,117 @@
-/**
- * Semantic events emitted by sorting algorithms.
- * These types mirror the Rust SortEvent enum in rust-core/src/events.rs.
- *
- * Events describe *what* happened, not *how* to render it.
- * Events support the Inverse Command Pattern for rewinding.
- */
+/** Shared semantic protocol; mirrors rust-core/src/events.rs. */
+export type ArrayId = number;
+export type ElementValue = number | null;
+export const MAIN_ARRAY_ID: ArrayId = 0;
+
+/** Identifies an array position, not a value moving between positions. */
+export interface ElementRef {
+  arrId: ArrayId;
+  idx: number;
+}
 
 export interface SwapEvent {
   type: "Swap";
-  i: number;
-  j: number;
+  i: ElementRef;
+  j: ElementRef;
 }
 
 export interface OverwriteEvent {
   type: "Overwrite";
-  idx: number;
-  old_val: number;
-  new_val: number;
+  dest: ElementRef;
+  old_val: ElementValue;
+  new_val: ElementValue;
+}
+
+/** Copies preserve the source, including when the destination value is equal. */
+export interface CopyEvent {
+  type: "Copy";
+  src: ElementRef;
+  dest: ElementRef;
+  old_val: ElementValue;
+  new_val: ElementValue;
 }
 
 export interface CompareEvent {
   type: "Compare";
-  i: number;
-  j: number;
+  i: ElementRef;
+  j: ElementRef;
 }
 
 export interface EnterRangeEvent {
   type: "EnterRange";
+  arrId: ArrayId;
   lo: number;
   hi: number;
 }
 
 export interface ExitRangeEvent {
   type: "ExitRange";
+  arrId: ArrayId;
   lo: number;
   hi: number;
+}
+
+export interface AddArrayEvent {
+  type: "AddArray";
+  arrId: ArrayId;
+  values: ElementValue[];
+}
+
+/** Undo requires the contents retained in workspace state. */
+export interface RemoveArrayEvent {
+  type: "RemoveArray";
+  arrId: ArrayId;
 }
 
 export interface DoneEvent {
   type: "Done";
 }
 
-/** Discriminated union of all sort events */
 export type SortEvent =
   | SwapEvent
   | OverwriteEvent
+  | CopyEvent
   | CompareEvent
   | EnterRangeEvent
   | ExitRangeEvent
+  | AddArrayEvent
+  | RemoveArrayEvent
   | DoneEvent;
 
 /**
- * Returns the inverse of a sort event for rewinding.
- * Stateless events (Compare, Done) return themselves.
- * EnterRange and ExitRange are inverses of each other.
+ * Inverse without workspace history. Lifecycle events return null and require
+ * directional workspace application. Copy undo writes only to its destination.
  */
-export function inverseEvent(event: SortEvent): SortEvent {
+export function inverseEvent(event: SortEvent): SortEvent | null {
   switch (event.type) {
-    case "Swap":
-      // Swap is self-inverse
-      return event;
     case "Overwrite":
-      // Swap old and new values
+      return { ...event, old_val: event.new_val, new_val: event.old_val };
+    case "Copy":
       return {
         type: "Overwrite",
-        idx: event.idx,
+        dest: event.dest,
         old_val: event.new_val,
         new_val: event.old_val,
       };
     case "EnterRange":
-      // EnterRange inverse is ExitRange with same bounds
-      return {
-        type: "ExitRange",
-        lo: event.lo,
-        hi: event.hi,
-      };
+      return { ...event, type: "ExitRange" };
     case "ExitRange":
-      // ExitRange inverse is EnterRange with same bounds
-      return {
-        type: "EnterRange",
-        lo: event.lo,
-        hi: event.hi,
-      };
+      return { ...event, type: "EnterRange" };
+    case "AddArray":
+    case "RemoveArray":
+      return null;
     default:
-      // Stateless events (Compare, Done) are their own inverse
       return event;
   }
 }
 
-/**
- * Returns true if the event mutates the array.
- */
+/** Includes changes to element values and array membership. */
 export function isMutationEvent(event: SortEvent): boolean {
-  return event.type === "Swap" || event.type === "Overwrite";
+  return (
+    event.type === "Swap" ||
+    event.type === "Overwrite" ||
+    event.type === "Copy" ||
+    event.type === "AddArray" ||
+    event.type === "RemoveArray"
+  );
 }

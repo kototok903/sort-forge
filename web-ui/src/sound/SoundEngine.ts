@@ -1,3 +1,4 @@
+import { MAIN_ARRAY_ID } from "@/types/events";
 import type { SortEvent } from "@/types/events";
 import type { SoundConfig, EnvelopeParams } from "@/sound/types";
 import { DEFAULT_SOUND_CONFIG } from "@/sound/types";
@@ -12,6 +13,7 @@ const EVENT_ENVELOPES: Record<string, EnvelopeParams> = {
   Compare: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.01 },
   Swap: { attack: 0.01, decay: 0.08, sustain: 0, release: 0.02 },
   Overwrite: { attack: 0.02, decay: 0.06, sustain: 0, release: 0.02 },
+  Copy: { attack: 0.02, decay: 0.06, sustain: 0, release: 0.02 },
 };
 
 /**
@@ -81,15 +83,16 @@ export class SoundEngine {
     const envelope = EVENT_ENVELOPES[event.type];
     if (!envelope) return;
 
-    // Usually element at index j is the one that's changing
+    // Main-only lookup until the workspace adapter is introduced in step 2.
     switch (event.type) {
       case "Compare":
-        this.playTone(array[event.j], envelope);
-        break;
       case "Swap":
-        this.playTone(array[event.j], envelope);
+        if (event.j.arrId !== MAIN_ARRAY_ID) return;
+        this.playTone(array[event.j.idx], envelope);
         break;
       case "Overwrite":
+      case "Copy":
+        if (event.new_val === null) return;
         this.playTone(event.new_val, envelope);
         break;
     }
@@ -101,6 +104,8 @@ export class SoundEngine {
   private playTone(value: number, envelope: EnvelopeParams): void {
     if (!this.audioCtx || !this.masterGain || this.config.waveform === "none")
       return;
+
+    if (!Number.isFinite(value)) return;
 
     const frequency = this.valueToFrequency(value);
     const now = this.audioCtx.currentTime;

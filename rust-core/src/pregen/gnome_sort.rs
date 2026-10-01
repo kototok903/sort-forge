@@ -3,7 +3,7 @@
 //! Similar to insertion sort but moves elements by swapping adjacent pairs.
 //! Named after garden gnomes sorting flower pots.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct GnomeSort;
@@ -24,14 +24,20 @@ impl PregenSort for GnomeSort {
             if i == 0 {
                 i += 1;
             } else {
-                events.push(SortEvent::Compare { i: i - 1, j: i });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(i - 1),
+                    j: ElementRef::main(i),
+                });
 
                 if array[i - 1] <= array[i] {
                     // In order, move forward
                     i += 1;
                 } else {
                     // Out of order, swap and move back
-                    events.push(SortEvent::Swap { i: i - 1, j: i });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(i - 1),
+                        j: ElementRef::main(i),
+                    });
                     array.swap(i - 1, i);
                     i -= 1;
                 }

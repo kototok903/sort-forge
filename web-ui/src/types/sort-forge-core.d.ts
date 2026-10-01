@@ -11,7 +11,7 @@ declare module "sort-forge-core" {
   /** Initialize panic hook for better error messages */
   export function init(): void;
 
-  /** Run a pregeneration sort on the given array */
+  /** Run a sort; input is main array (ID 0), output uses ElementRef events. */
   export function pregen_sort(algorithm: string, array: number[]): SortEvent[];
 
   /** Run a pregeneration sort and return both events and sorted array */

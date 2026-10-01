@@ -4,7 +4,7 @@
 //! where writes are expensive (e.g., flash memory). Each element is
 //! moved at most once to its final position.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct CycleSort;
@@ -28,7 +28,10 @@ impl PregenSort for CycleSort {
             // Count all smaller elements on right side of item.
             let mut pos = cycle_start;
             for i in cycle_start + 1..n {
-                events.push(SortEvent::Compare { i: cycle_start, j: i });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(cycle_start),
+                    j: ElementRef::main(i),
+                });
                 if array[i] < item {
                     pos += 1;
                 }
@@ -48,9 +51,9 @@ impl PregenSort for CycleSort {
             if pos != cycle_start {
                 let old_val = array[pos];
                 events.push(SortEvent::Overwrite {
-                    idx: pos,
-                    old_val,
-                    new_val: item,
+                    dest: ElementRef::main(pos),
+                    old_val: Some(old_val),
+                    new_val: Some(item),
                 });
                 std::mem::swap(&mut item, &mut array[pos]);
             }
@@ -61,7 +64,10 @@ impl PregenSort for CycleSort {
 
                 // Find position where we put the element
                 for i in cycle_start + 1..n {
-                    events.push(SortEvent::Compare { i: cycle_start, j: i });
+                    events.push(SortEvent::Compare {
+                        i: ElementRef::main(cycle_start),
+                        j: ElementRef::main(i),
+                    });
                     if array[i] < item {
                         pos += 1;
                     }
@@ -76,9 +82,9 @@ impl PregenSort for CycleSort {
                 if item != array[pos] {
                     let old_val = array[pos];
                     events.push(SortEvent::Overwrite {
-                        idx: pos,
-                        old_val,
-                        new_val: item,
+                        dest: ElementRef::main(pos),
+                        old_val: Some(old_val),
+                        new_val: Some(item),
                     });
                     std::mem::swap(&mut item, &mut array[pos]);
                 }

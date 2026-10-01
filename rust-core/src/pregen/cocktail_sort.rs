@@ -4,7 +4,7 @@
 //! on each pass through the list. This can be more efficient than bubble sort
 //! for certain inputs (e.g., "turtles" - small values at the end).
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct CocktailSort;
@@ -28,10 +28,16 @@ impl PregenSort for CocktailSort {
 
             // Forward pass (left to right)
             for i in start..end {
-                events.push(SortEvent::Compare { i, j: i + 1 });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(i),
+                    j: ElementRef::main(i + 1),
+                });
 
                 if array[i] > array[i + 1] {
-                    events.push(SortEvent::Swap { i, j: i + 1 });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(i),
+                        j: ElementRef::main(i + 1),
+                    });
                     array.swap(i, i + 1);
                     swapped = true;
                 }
@@ -47,10 +53,16 @@ impl PregenSort for CocktailSort {
 
             // Backward pass (right to left)
             for i in (start..end).rev() {
-                events.push(SortEvent::Compare { i, j: i + 1 });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(i),
+                    j: ElementRef::main(i + 1),
+                });
 
                 if array[i] > array[i + 1] {
-                    events.push(SortEvent::Swap { i, j: i + 1 });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(i),
+                        j: ElementRef::main(i + 1),
+                    });
                     array.swap(i, i + 1);
                     swapped = true;
                 }

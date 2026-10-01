@@ -4,7 +4,7 @@
 //! Single pointer moves left-to-right, swapping elements smaller than pivot.
 //! Emits EnterRange/ExitRange events to visualize recursive subarrays.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 use super::PregenSort;
 
 pub struct QuickSortLL;
@@ -29,12 +29,20 @@ fn quicksort_recursive(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec
     }
 
     // Enter this subarray range
-    events.push(SortEvent::EnterRange { lo, hi });
+    events.push(SortEvent::EnterRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi,
+    });
 
     let pivot_idx = partition(array, lo, hi, events);
 
     // Exit before recursing (range is done being partitioned)
-    events.push(SortEvent::ExitRange { lo, hi });
+    events.push(SortEvent::ExitRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi,
+    });
 
     // Recurse on left partition
     if pivot_idx > lo {
@@ -55,11 +63,17 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
 
     for j in lo..hi {
         // Compare current element with pivot
-        events.push(SortEvent::Compare { i: j, j: hi });
+        events.push(SortEvent::Compare {
+            i: ElementRef::main(j),
+            j: ElementRef::main(hi),
+        });
 
         if array[j] <= pivot {
             if i != j {
-                events.push(SortEvent::Swap { i, j });
+                events.push(SortEvent::Swap {
+                    i: ElementRef::main(i),
+                    j: ElementRef::main(j),
+                });
                 array.swap(i, j);
             }
             i += 1;
@@ -68,7 +82,10 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
 
     // Place pivot in its final position
     if i != hi {
-        events.push(SortEvent::Swap { i, j: hi });
+        events.push(SortEvent::Swap {
+            i: ElementRef::main(i),
+            j: ElementRef::main(hi),
+        });
         array.swap(i, hi);
     }
 

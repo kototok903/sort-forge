@@ -5,7 +5,7 @@
 //! Falls back to insertion sort for small subarrays. Used in C++ STL.
 
 use super::PregenSort;
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 
 pub struct Introsort;
 
@@ -53,12 +53,20 @@ fn introsort_recursive(
         return;
     }
 
-    events.push(SortEvent::EnterRange { lo, hi });
+    events.push(SortEvent::EnterRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi,
+    });
 
     // Quicksort partitioning
     let pivot_idx = partition(array, lo, hi, events);
 
-    events.push(SortEvent::ExitRange { lo, hi });
+    events.push(SortEvent::ExitRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi,
+    });
 
     // Recurse on subarrays
     if pivot_idx > lo {
@@ -75,26 +83,47 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
     let mid = lo + (hi - lo) / 2;
 
     // Sort lo, mid, hi to get median
-    events.push(SortEvent::Compare { i: lo, j: mid });
+    events.push(SortEvent::Compare {
+        i: ElementRef::main(lo),
+        j: ElementRef::main(mid),
+    });
     if array[lo] > array[mid] {
-        events.push(SortEvent::Swap { i: lo, j: mid });
+        events.push(SortEvent::Swap {
+            i: ElementRef::main(lo),
+            j: ElementRef::main(mid),
+        });
         array.swap(lo, mid);
     }
 
-    events.push(SortEvent::Compare { i: lo, j: hi });
+    events.push(SortEvent::Compare {
+        i: ElementRef::main(lo),
+        j: ElementRef::main(hi),
+    });
     if array[lo] > array[hi] {
-        events.push(SortEvent::Swap { i: lo, j: hi });
+        events.push(SortEvent::Swap {
+            i: ElementRef::main(lo),
+            j: ElementRef::main(hi),
+        });
         array.swap(lo, hi);
     }
 
-    events.push(SortEvent::Compare { i: mid, j: hi });
+    events.push(SortEvent::Compare {
+        i: ElementRef::main(mid),
+        j: ElementRef::main(hi),
+    });
     if array[mid] > array[hi] {
-        events.push(SortEvent::Swap { i: mid, j: hi });
+        events.push(SortEvent::Swap {
+            i: ElementRef::main(mid),
+            j: ElementRef::main(hi),
+        });
         array.swap(mid, hi);
     }
 
     // Move median to hi-1 as pivot
-    events.push(SortEvent::Swap { i: mid, j: hi - 1 });
+    events.push(SortEvent::Swap {
+        i: ElementRef::main(mid),
+        j: ElementRef::main(hi - 1),
+    });
     array.swap(mid, hi - 1);
 
     let pivot = array[hi - 1];
@@ -108,7 +137,10 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
             if i >= j {
                 break;
             }
-            events.push(SortEvent::Compare { i, j: hi - 1 });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(i),
+                j: ElementRef::main(hi - 1),
+            });
             if array[i] >= pivot {
                 break;
             }
@@ -120,7 +152,10 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
             if j <= i {
                 break;
             }
-            events.push(SortEvent::Compare { i: j, j: hi - 1 });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(j),
+                j: ElementRef::main(hi - 1),
+            });
             if array[j] <= pivot {
                 break;
             }
@@ -130,12 +165,18 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
             break;
         }
 
-        events.push(SortEvent::Swap { i, j });
+        events.push(SortEvent::Swap {
+            i: ElementRef::main(i),
+            j: ElementRef::main(j),
+        });
         array.swap(i, j);
     }
 
     // Restore pivot
-    events.push(SortEvent::Swap { i, j: hi - 1 });
+    events.push(SortEvent::Swap {
+        i: ElementRef::main(i),
+        j: ElementRef::main(hi - 1),
+    });
     array.swap(i, hi - 1);
 
     i
@@ -148,13 +189,16 @@ fn insertion_sort_range(array: &mut [i32], lo: usize, hi: usize, events: &mut Ve
         let mut j = i;
 
         while j > lo {
-            events.push(SortEvent::Compare { i: j - 1, j });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(j - 1),
+                j: ElementRef::main(j),
+            });
 
             if array[j - 1] > value {
                 events.push(SortEvent::Overwrite {
-                    idx: j,
-                    old_val: array[j],
-                    new_val: array[j - 1],
+                    dest: ElementRef::main(j),
+                    old_val: Some(array[j]),
+                    new_val: Some(array[j - 1]),
                 });
                 array[j] = array[j - 1];
                 j -= 1;
@@ -165,9 +209,9 @@ fn insertion_sort_range(array: &mut [i32], lo: usize, hi: usize, events: &mut Ve
 
         if j != i {
             events.push(SortEvent::Overwrite {
-                idx: j,
-                old_val: array[j],
-                new_val: value,
+                dest: ElementRef::main(j),
+                old_val: Some(array[j]),
+                new_val: Some(value),
             });
             array[j] = value;
         }
@@ -185,7 +229,10 @@ fn heapsort_range(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<Sort
 
     // Extract elements
     for end in (1..n).rev() {
-        events.push(SortEvent::Swap { i: lo, j: lo + end });
+        events.push(SortEvent::Swap {
+            i: ElementRef::main(lo),
+            j: ElementRef::main(lo + end),
+        });
         array.swap(lo, lo + end);
         sift_down(array, lo, 0, end, events);
     }
@@ -202,8 +249,8 @@ fn sift_down(array: &mut [i32], base: usize, root: usize, end: usize, events: &m
 
         if left < end {
             events.push(SortEvent::Compare {
-                i: base + largest,
-                j: base + left,
+                i: ElementRef::main(base + largest),
+                j: ElementRef::main(base + left),
             });
             if array[base + left] > array[base + largest] {
                 largest = left;
@@ -212,8 +259,8 @@ fn sift_down(array: &mut [i32], base: usize, root: usize, end: usize, events: &m
 
         if right < end {
             events.push(SortEvent::Compare {
-                i: base + largest,
-                j: base + right,
+                i: ElementRef::main(base + largest),
+                j: ElementRef::main(base + right),
             });
             if array[base + right] > array[base + largest] {
                 largest = right;
@@ -222,8 +269,8 @@ fn sift_down(array: &mut [i32], base: usize, root: usize, end: usize, events: &m
 
         if largest != current {
             events.push(SortEvent::Swap {
-                i: base + current,
-                j: base + largest,
+                i: ElementRef::main(base + current),
+                j: ElementRef::main(base + largest),
             });
             array.swap(base + current, base + largest);
             current = largest;

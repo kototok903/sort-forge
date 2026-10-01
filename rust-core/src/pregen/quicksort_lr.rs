@@ -4,7 +4,7 @@
 //! Two pointers move toward each other from both ends.
 //! Emits EnterRange/ExitRange events to visualize recursive subarrays.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 use super::PregenSort;
 
 pub struct QuickSortLR;
@@ -29,12 +29,20 @@ fn quicksort_recursive(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec
     }
 
     // Enter this subarray range
-    events.push(SortEvent::EnterRange { lo, hi });
+    events.push(SortEvent::EnterRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi,
+    });
 
     let pivot_idx = partition(array, lo, hi, events);
 
     // Exit before recursing (range is done being partitioned)
-    events.push(SortEvent::ExitRange { lo, hi });
+    events.push(SortEvent::ExitRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi,
+    });
 
     // Recurse on left partition (includes pivot_idx)
     if pivot_idx > lo {
@@ -58,18 +66,27 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
     loop {
         // Move left pointer right while element is less than pivot
         while array[left] < pivot {
-            events.push(SortEvent::Compare { i: left, j: lo });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(left),
+                j: ElementRef::main(lo),
+            });
             left += 1;
         }
 
         // Move right pointer left while element is greater than pivot
         while array[right] > pivot {
-            events.push(SortEvent::Compare { i: right, j: lo });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(right),
+                j: ElementRef::main(lo),
+            });
             right -= 1;
         }
 
         // Emit compare for the stopping positions
-        events.push(SortEvent::Compare { i: left, j: right });
+        events.push(SortEvent::Compare {
+            i: ElementRef::main(left),
+            j: ElementRef::main(right),
+        });
 
         // If pointers crossed, we're done
         if left >= right {
@@ -77,7 +94,10 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
         }
 
         // Swap elements at left and right pointers
-        events.push(SortEvent::Swap { i: left, j: right });
+        events.push(SortEvent::Swap {
+            i: ElementRef::main(left),
+            j: ElementRef::main(right),
+        });
         array.swap(left, right);
 
         // Move pointers inward to continue

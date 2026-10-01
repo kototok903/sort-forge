@@ -5,7 +5,7 @@
 //! into small "runs" which are sorted with insertion sort, then merged.
 
 use super::PregenSort;
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 
 pub struct Timsort;
 
@@ -39,11 +39,13 @@ impl PregenSort for Timsort {
 
                 if mid < right {
                     events.push(SortEvent::EnterRange {
+                        arr_id: MAIN_ARRAY_ID,
                         lo: left,
                         hi: right,
                     });
                     merge(array, left, mid, right, &mut events);
                     events.push(SortEvent::ExitRange {
+                        arr_id: MAIN_ARRAY_ID,
                         lo: left,
                         hi: right,
                     });
@@ -74,13 +76,16 @@ fn insertion_sort_range(array: &mut [i32], lo: usize, hi: usize, events: &mut Ve
         let mut j = i;
 
         while j > lo {
-            events.push(SortEvent::Compare { i: j - 1, j });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(j - 1),
+                j: ElementRef::main(j),
+            });
 
             if array[j - 1] > value {
                 events.push(SortEvent::Overwrite {
-                    idx: j,
-                    old_val: array[j],
-                    new_val: array[j - 1],
+                    dest: ElementRef::main(j),
+                    old_val: Some(array[j]),
+                    new_val: Some(array[j - 1]),
                 });
                 array[j] = array[j - 1];
                 j -= 1;
@@ -91,9 +96,9 @@ fn insertion_sort_range(array: &mut [i32], lo: usize, hi: usize, events: &mut Ve
 
         if j != i {
             events.push(SortEvent::Overwrite {
-                idx: j,
-                old_val: array[j],
-                new_val: value,
+                dest: ElementRef::main(j),
+                old_val: Some(array[j]),
+                new_val: Some(value),
             });
             array[j] = value;
         }
@@ -114,16 +119,16 @@ fn merge(array: &mut [i32], lo: usize, mid: usize, hi: usize, events: &mut Vec<S
         let left_idx = lo + i;
         let right_idx = mid + 1 + j;
         events.push(SortEvent::Compare {
-            i: left_idx.min(hi),
-            j: right_idx.min(hi),
+            i: ElementRef::main(left_idx.min(hi)),
+            j: ElementRef::main(right_idx.min(hi)),
         });
 
         if left[i] <= right[j] {
             if array[k] != left[i] {
                 events.push(SortEvent::Overwrite {
-                    idx: k,
-                    old_val: array[k],
-                    new_val: left[i],
+                    dest: ElementRef::main(k),
+                    old_val: Some(array[k]),
+                    new_val: Some(left[i]),
                 });
             }
             array[k] = left[i];
@@ -131,9 +136,9 @@ fn merge(array: &mut [i32], lo: usize, mid: usize, hi: usize, events: &mut Vec<S
         } else {
             if array[k] != right[j] {
                 events.push(SortEvent::Overwrite {
-                    idx: k,
-                    old_val: array[k],
-                    new_val: right[j],
+                    dest: ElementRef::main(k),
+                    old_val: Some(array[k]),
+                    new_val: Some(right[j]),
                 });
             }
             array[k] = right[j];
@@ -146,9 +151,9 @@ fn merge(array: &mut [i32], lo: usize, mid: usize, hi: usize, events: &mut Vec<S
     while i < left.len() {
         if array[k] != left[i] {
             events.push(SortEvent::Overwrite {
-                idx: k,
-                old_val: array[k],
-                new_val: left[i],
+                dest: ElementRef::main(k),
+                old_val: Some(array[k]),
+                new_val: Some(left[i]),
             });
         }
         array[k] = left[i];
@@ -159,9 +164,9 @@ fn merge(array: &mut [i32], lo: usize, mid: usize, hi: usize, events: &mut Vec<S
     while j < right.len() {
         if array[k] != right[j] {
             events.push(SortEvent::Overwrite {
-                idx: k,
-                old_val: array[k],
-                new_val: right[j],
+                dest: ElementRef::main(k),
+                old_val: Some(array[k]),
+                new_val: Some(right[j]),
             });
         }
         array[k] = right[j];

@@ -1,6 +1,6 @@
 //! Selection Sort implementation for V1 (Pregeneration) engine.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct SelectionSort;
@@ -20,7 +20,10 @@ impl PregenSort for SelectionSort {
 
             // Find minimum element in unsorted portion
             for j in (i + 1)..n {
-                events.push(SortEvent::Compare { i: min_idx, j });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(min_idx),
+                    j: ElementRef::main(j),
+                });
 
                 if array[j] < array[min_idx] {
                     min_idx = j;
@@ -29,7 +32,10 @@ impl PregenSort for SelectionSort {
 
             // Swap if minimum is not already in position
             if min_idx != i {
-                events.push(SortEvent::Swap { i, j: min_idx });
+                events.push(SortEvent::Swap {
+                    i: ElementRef::main(i),
+                    j: ElementRef::main(min_idx),
+                });
                 array.swap(i, min_idx);
             }
         }

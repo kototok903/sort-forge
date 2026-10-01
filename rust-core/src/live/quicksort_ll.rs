@@ -2,7 +2,7 @@
 //!
 //! Uses explicit stack instead of recursion for state machine approach.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 use super::Stepper;
 
 /// State of an in-progress partition operation.
@@ -75,18 +75,28 @@ impl Stepper for QuickSortLLStepper {
 
             // Emit EnterRange on first step of partition
             if !state.entered {
-                events.push(SortEvent::EnterRange { lo: state.lo, hi: state.hi });
+                events.push(SortEvent::EnterRange {
+                    arr_id: MAIN_ARRAY_ID,
+                    lo: state.lo,
+                    hi: state.hi,
+                });
                 state.entered = true;
                 continue;
             }
 
             // Partitioning: scan with j
             if state.j < state.hi {
-                events.push(SortEvent::Compare { i: state.j, j: state.hi });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(state.j),
+                    j: ElementRef::main(state.hi),
+                });
 
                 if arr[state.j] <= state.pivot {
                     if state.i != state.j {
-                        events.push(SortEvent::Swap { i: state.i, j: state.j });
+                        events.push(SortEvent::Swap {
+                            i: ElementRef::main(state.i),
+                            j: ElementRef::main(state.j),
+                        });
                         arr.swap(state.i, state.j);
                     }
                     state.i += 1;
@@ -95,7 +105,10 @@ impl Stepper for QuickSortLLStepper {
             } else {
                 // Partition complete - place pivot
                 if state.i != state.hi {
-                    events.push(SortEvent::Swap { i: state.i, j: state.hi });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(state.i),
+                        j: ElementRef::main(state.hi),
+                    });
                     arr.swap(state.i, state.hi);
                 }
 
@@ -103,7 +116,11 @@ impl Stepper for QuickSortLLStepper {
                 let lo = state.lo;
                 let hi = state.hi;
 
-                events.push(SortEvent::ExitRange { lo, hi });
+                events.push(SortEvent::ExitRange {
+                    arr_id: MAIN_ARRAY_ID,
+                    lo,
+                    hi,
+                });
 
                 // Push sub-ranges to stack (right first so left is processed first)
                 if pivot_idx + 1 < hi {

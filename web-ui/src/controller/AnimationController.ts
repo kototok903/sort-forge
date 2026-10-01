@@ -1,11 +1,8 @@
 import type { SortEvent } from "@/types/events";
 import type { ISortEngine } from "@/engines/types";
-import type {
-  Highlight,
-  RenderState,
-  IRenderer,
-} from "@/renderer/types";
-import { inverseEvent } from "@/types/events";
+import type { Highlight, RenderState, IRenderer } from "@/renderer/types";
+import { inverseEvent, MAIN_ARRAY_ID } from "@/types/events";
+import type { ElementRef, ElementValue } from "@/types/events";
 import {
   BASE_EVENTS_PER_SECOND,
   SPEED_DEFAULT,
@@ -213,7 +210,7 @@ export class AnimationController {
     if (!event) return;
 
     this.currentStep = targetStep;
-    this.applyEventToArray(inverseEvent(event));
+    this.applyInverseEvent(event);
     this.applyVisualStateForStep(this.currentStep);
     this.engine.seek(this.currentStep);
 
@@ -359,7 +356,7 @@ export class AnimationController {
             }
 
             this.currentStep = targetStep;
-            this.applyEventToArray(inverseEvent(event));
+            this.applyInverseEvent(event);
             appliedBackward = true;
           }
           if (appliedBackward) {
@@ -412,31 +409,71 @@ export class AnimationController {
     this.applyVisualState(event);
   }
 
+  // Main-only adapter until step 2 introduces retained workspace state.
+  private mainIndex(ref: ElementRef): number {
+    if (ref.arrId !== MAIN_ARRAY_ID) {
+      throw new Error("Auxiliary array playback requires workspace support");
+    }
+    return ref.idx;
+  }
+
+  private mainValue(value: ElementValue): number {
+    if (value === null) {
+      throw new Error("Empty slot playback requires workspace support");
+    }
+    return value;
+  }
+
+  private applyInverseEvent(event: SortEvent): void {
+    const inverse = inverseEvent(event);
+    if (!inverse) {
+      throw new Error("Array lifecycle rewind requires workspace support");
+    }
+    this.applyEventToArray(inverse);
+  }
+
   private applyEventToArray(event: SortEvent): void {
     switch (event.type) {
       case "Swap": {
-        const temp = this.array[event.i];
-        this.array[event.i] = this.array[event.j];
-        this.array[event.j] = temp;
+        const i = this.mainIndex(event.i);
+        const j = this.mainIndex(event.j);
+        const temp = this.array[i];
+        this.array[i] = this.array[j];
+        this.array[j] = temp;
         break;
       }
       case "Overwrite": {
-        this.array[event.idx] = event.new_val;
+        const idx = this.mainIndex(event.dest);
+        this.array[idx] = this.mainValue(event.new_val);
         break;
       }
-      case "EnterRange": {
-        this.rangeStack.push({ lo: event.lo, hi: event.hi });
-        this.activeRange = { lo: event.lo, hi: event.hi };
+      case "Copy": {
+        this.mainIndex(event.src);
+        const idx = this.mainIndex(event.dest);
+        this.array[idx] = this.mainValue(event.new_val);
         break;
       }
+      case "Compare": {
+        this.mainIndex(event.i);
+        this.mainIndex(event.j);
+        break;
+      }
+      case "EnterRange":
       case "ExitRange": {
-        this.rangeStack.pop();
-        this.activeRange =
-          this.rangeStack.length > 0
-            ? this.rangeStack[this.rangeStack.length - 1]
-            : null;
+        if (event.arrId !== MAIN_ARRAY_ID) {
+          throw new Error("Auxiliary array ranges require workspace support");
+        }
+        if (event.type === "EnterRange") {
+          this.rangeStack.push({ lo: event.lo, hi: event.hi });
+        } else {
+          this.rangeStack.pop();
+        }
+        this.activeRange = this.rangeStack.at(-1) ?? null;
         break;
       }
+      case "AddArray":
+      case "RemoveArray":
+        throw new Error("Array lifecycle playback requires workspace support");
     }
   }
 
@@ -447,17 +484,31 @@ export class AnimationController {
     switch (event.type) {
       case "Compare":
         this.highlights = [
-          { kind: "comparing", indices: [event.i, event.j] },
+          {
+            kind: "comparing",
+            indices: [this.mainIndex(event.i), this.mainIndex(event.j)],
+          },
         ];
         break;
       case "Swap":
         this.highlights = [
-          { kind: "swapping", indices: [event.i, event.j] },
+          {
+            kind: "swapping",
+            indices: [this.mainIndex(event.i), this.mainIndex(event.j)],
+          },
         ];
         break;
       case "Overwrite":
         this.highlights = [
-          { kind: "writing", indices: [event.idx] },
+          { kind: "writing", indices: [this.mainIndex(event.dest)] },
+        ];
+        break;
+      case "Copy":
+        this.highlights = [
+          {
+            kind: "writing",
+            indices: [this.mainIndex(event.src), this.mainIndex(event.dest)],
+          },
         ];
         break;
       case "Done":

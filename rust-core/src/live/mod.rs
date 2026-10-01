@@ -62,8 +62,7 @@ impl LiveStepper {
             StepperKind::QuickSortLL(s) => s.step(&mut self.arr, limit),
         };
 
-        serde_wasm_bindgen::to_value(&events)
-            .map_err(|e| JsValue::from_str(&e.to_string()))
+        crate::events::events_to_js(&events)
     }
 
     /// Check if sort is complete.

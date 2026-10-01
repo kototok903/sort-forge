@@ -3,7 +3,7 @@
 //! Compares and swaps adjacent pairs, alternating between odd-even and even-odd pairs.
 //! Originally designed for parallel processors.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct OddEvenSort;
@@ -25,10 +25,16 @@ impl PregenSort for OddEvenSort {
 
             // Odd phase: compare (1,2), (3,4), (5,6), ...
             for i in (1..n - 1).step_by(2) {
-                events.push(SortEvent::Compare { i, j: i + 1 });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(i),
+                    j: ElementRef::main(i + 1),
+                });
 
                 if array[i] > array[i + 1] {
-                    events.push(SortEvent::Swap { i, j: i + 1 });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(i),
+                        j: ElementRef::main(i + 1),
+                    });
                     array.swap(i, i + 1);
                     sorted = false;
                 }
@@ -36,10 +42,16 @@ impl PregenSort for OddEvenSort {
 
             // Even phase: compare (0,1), (2,3), (4,5), ...
             for i in (0..n - 1).step_by(2) {
-                events.push(SortEvent::Compare { i, j: i + 1 });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(i),
+                    j: ElementRef::main(i + 1),
+                });
 
                 if array[i] > array[i + 1] {
-                    events.push(SortEvent::Swap { i, j: i + 1 });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(i),
+                        j: ElementRef::main(i + 1),
+                    });
                     array.swap(i, i + 1);
                     sorted = false;
                 }

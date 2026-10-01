@@ -1,6 +1,6 @@
 //! Bubble Sort stepper for V2 (Live) engine.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::Stepper;
 
 pub struct BubbleSortStepper {
@@ -36,11 +36,17 @@ impl Stepper for BubbleSortStepper {
             }
 
             // Compare current pair
-            events.push(SortEvent::Compare { i: self.j, j: self.j + 1 });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(self.j),
+                j: ElementRef::main(self.j + 1),
+            });
 
             if arr[self.j] > arr[self.j + 1] {
                 if events.len() < limit {
-                    events.push(SortEvent::Swap { i: self.j, j: self.j + 1 });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(self.j),
+                        j: ElementRef::main(self.j + 1),
+                    });
                     arr.swap(self.j, self.j + 1);
                     self.swapped = true;
                 } else {

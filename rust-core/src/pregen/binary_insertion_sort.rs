@@ -3,7 +3,7 @@
 //! Uses binary search to find the insertion position, reducing comparisons
 //! from O(n) to O(log n) per element, though shifts remain O(n).
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct BinaryInsertionSort;
@@ -27,9 +27,9 @@ impl PregenSort for BinaryInsertionSort {
             // Shift elements right to make room (via overwrites)
             for j in (insert_pos..i).rev() {
                 events.push(SortEvent::Overwrite {
-                    idx: j + 1,
-                    old_val: array[j + 1],
-                    new_val: array[j],
+                    dest: ElementRef::main(j + 1),
+                    old_val: Some(array[j + 1]),
+                    new_val: Some(array[j]),
                 });
                 array[j + 1] = array[j];
             }
@@ -37,9 +37,9 @@ impl PregenSort for BinaryInsertionSort {
             // Insert value at final position (only if it moved)
             if insert_pos != i {
                 events.push(SortEvent::Overwrite {
-                    idx: insert_pos,
-                    old_val: array[insert_pos],
-                    new_val: value,
+                    dest: ElementRef::main(insert_pos),
+                    old_val: Some(array[insert_pos]),
+                    new_val: Some(value),
                 });
                 array[insert_pos] = value;
             }
@@ -65,7 +65,10 @@ fn binary_search_insert_pos(
         let mid = lo + (hi - lo) / 2;
 
         // Compare with the element being inserted (at index `right`)
-        events.push(SortEvent::Compare { i: mid, j: right });
+        events.push(SortEvent::Compare {
+            i: ElementRef::main(mid),
+            j: ElementRef::main(right),
+        });
 
         if array[mid] <= value {
             lo = mid + 1;

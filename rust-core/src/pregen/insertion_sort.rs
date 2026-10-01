@@ -1,7 +1,7 @@
 //! Insertion Sort implementation for V1 (Pregeneration) engine.
 
 use super::PregenSort;
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 
 pub struct InsertionSort;
 
@@ -21,14 +21,17 @@ impl PregenSort for InsertionSort {
 
             // Find insertion position and shift elements right
             while j > 0 {
-                events.push(SortEvent::Compare { i: j - 1, j });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(j - 1),
+                    j: ElementRef::main(j),
+                });
 
                 if array[j - 1] > value {
                     // Shift element right
                     events.push(SortEvent::Overwrite {
-                        idx: j,
-                        old_val: array[j],
-                        new_val: array[j - 1],
+                        dest: ElementRef::main(j),
+                        old_val: Some(array[j]),
+                        new_val: Some(array[j - 1]),
                     });
                     array[j] = array[j - 1];
                     j -= 1;
@@ -40,9 +43,9 @@ impl PregenSort for InsertionSort {
             // Insert value at final position (only if it moved)
             if j != i {
                 events.push(SortEvent::Overwrite {
-                    idx: j,
-                    old_val: array[j],
-                    new_val: value,
+                    dest: ElementRef::main(j),
+                    old_val: Some(array[j]),
+                    new_val: Some(value),
                 });
                 array[j] = value;
             }

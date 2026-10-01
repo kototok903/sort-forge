@@ -3,7 +3,7 @@
 //! Processes digits from most significant to least significant.
 //! Recursively sorts each bucket. Only works with non-negative integers.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 use super::PregenSort;
 
 pub struct RadixMsdSort;
@@ -49,7 +49,11 @@ fn msd_sort(array: &mut [i32], lo: usize, hi: usize, exp: i32, events: &mut Vec<
     }
 
     // Enter range for visualization
-    events.push(SortEvent::EnterRange { lo, hi: hi - 1 });
+    events.push(SortEvent::EnterRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi: hi - 1,
+    });
 
     // Count occurrences of each digit
     let mut count = vec![0usize; RADIX + 1];
@@ -81,18 +85,25 @@ fn msd_sort(array: &mut [i32], lo: usize, hi: usize, exp: i32, events: &mut Vec<
     for i in 0..(hi - lo) {
         let idx = lo + i;
         if array[idx] != temp[i] {
-            events.push(SortEvent::Compare { i: idx, j: idx });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(idx),
+                j: ElementRef::main(idx),
+            });
             events.push(SortEvent::Overwrite {
-                idx,
-                old_val: array[idx],
-                new_val: temp[i],
+                dest: ElementRef::main(idx),
+                old_val: Some(array[idx]),
+                new_val: Some(temp[i]),
             });
             array[idx] = temp[i];
         }
     }
 
     // Exit range
-    events.push(SortEvent::ExitRange { lo, hi: hi - 1 });
+    events.push(SortEvent::ExitRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo,
+        hi: hi - 1,
+    });
 
     // Recursively sort each bucket
     if exp / RADIX as i32 > 0 {

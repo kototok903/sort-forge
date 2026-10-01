@@ -1,6 +1,6 @@
 //! Bubble Sort implementation for V1 (Pregeneration) engine.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct BubbleSort;
@@ -20,11 +20,17 @@ impl PregenSort for BubbleSort {
 
             for j in 0..n - 1 - i {
                 // Emit compare event
-                events.push(SortEvent::Compare { i: j, j: j + 1 });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(j),
+                    j: ElementRef::main(j + 1),
+                });
 
                 if array[j] > array[j + 1] {
                     // Emit swap event and perform swap
-                    events.push(SortEvent::Swap { i: j, j: j + 1 });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(j),
+                        j: ElementRef::main(j + 1),
+                    });
                     array.swap(j, j + 1);
                     swapped = true;
                 }

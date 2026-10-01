@@ -4,7 +4,7 @@
 //! Uses a gap sequence that decreases to 1. This implementation uses the
 //! original Shell sequence (n/2, n/4, ..., 1).
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct ShellSort;
@@ -30,13 +30,16 @@ impl PregenSort for ShellSort {
 
                 // Shift earlier gap-sorted elements up until correct position found
                 while j >= gap {
-                    events.push(SortEvent::Compare { i: j - gap, j });
+                    events.push(SortEvent::Compare {
+                        i: ElementRef::main(j - gap),
+                        j: ElementRef::main(j),
+                    });
 
                     if array[j - gap] > value {
                         events.push(SortEvent::Overwrite {
-                            idx: j,
-                            old_val: array[j],
-                            new_val: array[j - gap],
+                            dest: ElementRef::main(j),
+                            old_val: Some(array[j]),
+                            new_val: Some(array[j - gap]),
                         });
                         array[j] = array[j - gap];
                         j -= gap;
@@ -48,9 +51,9 @@ impl PregenSort for ShellSort {
                 // Place value at its correct position
                 if j != i {
                     events.push(SortEvent::Overwrite {
-                        idx: j,
-                        old_val: array[j],
-                        new_val: value,
+                        dest: ElementRef::main(j),
+                        old_val: Some(array[j]),
+                        new_val: Some(value),
                     });
                     array[j] = value;
                 }

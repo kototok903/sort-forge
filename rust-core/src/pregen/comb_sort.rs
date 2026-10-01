@@ -4,7 +4,7 @@
 //! of ~1.3 (the "shrink factor"). Eliminates "turtles" (small values near
 //! the end) more efficiently than bubble sort.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct CombSort;
@@ -36,10 +36,16 @@ impl PregenSort for CombSort {
             // Compare elements with current gap
             for i in 0..n - gap {
                 let j = i + gap;
-                events.push(SortEvent::Compare { i, j });
+                events.push(SortEvent::Compare {
+                    i: ElementRef::main(i),
+                    j: ElementRef::main(j),
+                });
 
                 if array[i] > array[j] {
-                    events.push(SortEvent::Swap { i, j });
+                    events.push(SortEvent::Swap {
+                        i: ElementRef::main(i),
+                        j: ElementRef::main(j),
+                    });
                     array.swap(i, j);
                     sorted = false;
                 }

@@ -4,7 +4,7 @@
 //! Uses counting sort as a stable subroutine for each digit.
 //! Only works with non-negative integers.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct RadixLsdSort;
@@ -71,11 +71,14 @@ fn counting_sort_by_digit(array: &mut [i32], exp: i32, events: &mut Vec<SortEven
     for i in 0..n {
         if array[i] != output[i] {
             // Emit compare to show which element we're looking at
-            events.push(SortEvent::Compare { i, j: i });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(i),
+                j: ElementRef::main(i),
+            });
             events.push(SortEvent::Overwrite {
-                idx: i,
-                old_val: array[i],
-                new_val: output[i],
+                dest: ElementRef::main(i),
+                old_val: Some(array[i]),
+                new_val: Some(output[i]),
             });
             array[i] = output[i];
         }

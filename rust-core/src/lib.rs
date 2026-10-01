@@ -2,9 +2,9 @@ pub mod events;
 pub mod live;
 pub mod pregen;
 
-use wasm_bindgen::prelude::*;
 use events::SortEvent;
 use pregen::Algorithm;
+use wasm_bindgen::prelude::*;
 
 /// Initialize panic hook for better error messages in browser console
 #[wasm_bindgen(start)]
@@ -53,7 +53,11 @@ pub fn pregen_sort_with_result(algorithm: &str, array: JsValue) -> Result<JsValu
         sorted_array: arr,
     };
 
-    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
+    serde::Serialize::serialize(
+        &result,
+        &serde_wasm_bindgen::Serializer::new().serialize_missing_as_null(true),
+    )
+    .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 /// Result of a pregeneration sort, including events and final array.

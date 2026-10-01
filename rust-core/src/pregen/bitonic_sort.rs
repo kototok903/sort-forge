@@ -4,7 +4,7 @@
 //! Note: Classic bitonic sort requires array length to be a power of 2.
 //! This implementation pads arrays internally to handle arbitrary sizes.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct BitonicSort;
@@ -45,9 +45,15 @@ impl PregenSort for BitonicSort {
 
                         // Only emit events for indices within the original array
                         if i < n && l < n {
-                            events.push(SortEvent::Compare { i, j: l });
+                            events.push(SortEvent::Compare {
+                                i: ElementRef::main(i),
+                                j: ElementRef::main(l),
+                            });
                             if should_swap {
-                                events.push(SortEvent::Swap { i, j: l });
+                                events.push(SortEvent::Swap {
+                                    i: ElementRef::main(i),
+                                    j: ElementRef::main(l),
+                                });
                                 frontend_view.swap(i, l);
                             }
                         }
@@ -70,9 +76,9 @@ impl PregenSort for BitonicSort {
         for i in 0..n {
             if frontend_view[i] != array[i] {
                 events.push(SortEvent::Overwrite {
-                    idx: i,
-                    old_val: frontend_view[i],
-                    new_val: array[i],
+                    dest: ElementRef::main(i),
+                    old_val: Some(frontend_view[i]),
+                    new_val: Some(array[i]),
                 });
             }
         }

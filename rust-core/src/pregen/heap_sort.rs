@@ -3,7 +3,7 @@
 //! Builds a max-heap and repeatedly extracts the maximum element.
 //! In-place with O(n log n) time complexity.
 
-use crate::events::SortEvent;
+use crate::events::{ElementRef, SortEvent};
 use super::PregenSort;
 
 pub struct HeapSort;
@@ -26,7 +26,10 @@ impl PregenSort for HeapSort {
         // Extract elements from heap one by one
         for end in (1..n).rev() {
             // Move current root (max) to end
-            events.push(SortEvent::Swap { i: 0, j: end });
+            events.push(SortEvent::Swap {
+                i: ElementRef::main(0),
+                j: ElementRef::main(end),
+            });
             array.swap(0, end);
 
             // Restore heap property for reduced heap
@@ -50,7 +53,10 @@ fn sift_down(array: &mut [i32], root: usize, end: usize, events: &mut Vec<SortEv
 
         // Compare with left child
         if left < end {
-            events.push(SortEvent::Compare { i: largest, j: left });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(largest),
+                j: ElementRef::main(left),
+            });
             if array[left] > array[largest] {
                 largest = left;
             }
@@ -58,7 +64,10 @@ fn sift_down(array: &mut [i32], root: usize, end: usize, events: &mut Vec<SortEv
 
         // Compare with right child
         if right < end {
-            events.push(SortEvent::Compare { i: largest, j: right });
+            events.push(SortEvent::Compare {
+                i: ElementRef::main(largest),
+                j: ElementRef::main(right),
+            });
             if array[right] > array[largest] {
                 largest = right;
             }
@@ -66,7 +75,10 @@ fn sift_down(array: &mut [i32], root: usize, end: usize, events: &mut Vec<SortEv
 
         // If largest is not root, swap and continue
         if largest != current {
-            events.push(SortEvent::Swap { i: current, j: largest });
+            events.push(SortEvent::Swap {
+                i: ElementRef::main(current),
+                j: ElementRef::main(largest),
+            });
             array.swap(current, largest);
             current = largest;
         } else {
