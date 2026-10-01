@@ -66,25 +66,39 @@ describe("rebuilt Wasm protocol and controller compatibility", () => {
         const snapshots = [[...input]];
         for (const event of engine.getAllEvents()) {
           if (event.type === "Overwrite") {
-            expect(controller.getState().array[event.dest.idx]).toBe(
-              event.old_val
-            );
+            expect(
+              controller.getState().workspace.arrays.get(0).values[
+                event.dest.idx
+              ]
+            ).toBe(event.old_val);
           }
           controller.stepForward();
-          snapshots.push([...controller.getState().array]);
+          snapshots.push([
+            ...controller.getState().workspace.arrays.get(0).values,
+          ]);
         }
-        expect(controller.getState().array).toEqual(result.sorted_array);
+        expect(controller.getState().workspace.arrays.get(0).values).toEqual(
+          result.sorted_array
+        );
         for (let step = snapshots.length - 2; step >= 0; step--) {
           controller.stepBackward();
-          expect(controller.getState().array).toEqual(snapshots[step]);
+          expect(controller.getState().workspace.arrays.get(0).values).toEqual(
+            snapshots[step]
+          );
         }
         const midpoint = Math.floor(result.events.length / 2);
         controller.seekTo(midpoint);
-        expect(controller.getState().array).toEqual(snapshots[midpoint]);
+        expect(controller.getState().workspace.arrays.get(0).values).toEqual(
+          snapshots[midpoint]
+        );
         controller.seekTo(result.events.length);
-        expect(controller.getState().array).toEqual(result.sorted_array);
+        expect(controller.getState().workspace.arrays.get(0).values).toEqual(
+          result.sorted_array
+        );
         controller.reset();
-        expect(controller.getState().array).toEqual(input);
+        expect(controller.getState().workspace.arrays.get(0).values).toEqual(
+          input
+        );
       }
     });
   }
@@ -101,11 +115,13 @@ describe("rebuilt Wasm protocol and controller compatibility", () => {
         controller.stepForward();
         if (++steps > 10000) throw new Error("Live playback did not complete");
       }
-      expect(controller.getState().array).toEqual(
+      expect(controller.getState().workspace.arrays.get(0).values).toEqual(
         [...input].sort((a, b) => a - b)
       );
       controller.reset();
-      expect(controller.getState().array).toEqual(input);
+      expect(controller.getState().workspace.arrays.get(0).values).toEqual(
+        input
+      );
       controller.stepForward();
       expect(controller.getState().currentStep).toBe(1);
     });

@@ -1,3 +1,5 @@
+import type { ElementRef } from "@/types/events";
+import type { WorkspaceState } from "@/workspace/types";
 import type { ThemeVizColors } from "@/themes/types";
 
 /**
@@ -7,15 +9,15 @@ export type HighlightKind = "comparing" | "swapping" | "writing";
 
 export interface Highlight {
   kind: HighlightKind;
-  indices: number[];
+  elements: ElementRef[];
 }
 
 /**
  * Render state passed to the renderer each frame.
  */
 export interface RenderState {
-  /** The current array values */
-  array: number[];
+  /** All arrays and their independent range stacks; removed entries are history. */
+  workspace: WorkspaceState;
 
   /** Fixed minimum value for consistent scaling during a run */
   minValue: number;
@@ -25,12 +27,6 @@ export interface RenderState {
 
   /** Highlight overlays for the current frame */
   highlights: Highlight[];
-
-  /** Whether the array is fully sorted */
-  isSorted: boolean;
-
-  /** Currently active range (for highlighting subarrays), null if none */
-  activeRange: { lo: number; hi: number } | null;
 }
 
 /**

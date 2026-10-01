@@ -70,7 +70,7 @@ describe("array-aware event semantics", () => {
 
   test("lifecycle events require retained workspace history for undo", () => {
     for (const event of [
-      { type: "AddArray", arrId: 1, values: [null, 0] },
+      { type: "AddArray", arrId: 1, length: 2 },
       { type: "RemoveArray", arrId: 1 },
     ]) {
       expect(inverseEvent(event)).toBeNull();
@@ -107,13 +107,19 @@ describe("main-only controller migration", () => {
     await controller.initialize(eventEngine(events), "fixture", [3, 2, 1]);
     controller.stepForward();
     controller.stepForward();
-    expect(controller.getState().array).toEqual([3, 3, 1]);
-    expect(rendered().highlights).toEqual([
-      { kind: "writing", indices: [0, 1] },
+    expect(controller.getState().workspace.arrays.get(0).values).toEqual([
+      3, 3, 1,
     ]);
-    expect(rendered().activeRange).toEqual({ lo: 0, hi: 2 });
+    expect(rendered().highlights).toEqual([
+      { kind: "writing", elements: [main(0), main(1)] },
+    ]);
+    expect(rendered().workspace.arrays.get(0).rangeStack).toEqual([
+      { lo: 0, hi: 2 },
+    ]);
     controller.stepBackward();
-    expect(controller.getState().array).toEqual([3, 2, 1]);
+    expect(controller.getState().workspace.arrays.get(0).values).toEqual([
+      3, 2, 1,
+    ]);
     const states = [];
     controller.reset();
     states.push(rendered());
@@ -121,7 +127,9 @@ describe("main-only controller migration", () => {
       controller.stepForward();
       states.push(rendered());
     }
-    expect(controller.getState().array).toEqual([1, 2, 3]);
+    expect(controller.getState().workspace.arrays.get(0).values).toEqual([
+      1, 2, 3,
+    ]);
     for (let i = events.length; i >= 0; i--) {
       controller.seekTo(i);
       expect(rendered()).toEqual(states[i]);
@@ -133,24 +141,19 @@ describe("main-only controller migration", () => {
     }
   });
 
-  test("unsupported auxiliary events fail instead of mutating main", async () => {
+  test("missing auxiliary arrays fail instead of mutating main", async () => {
     for (const event of [
       { type: "Swap", i: main(0), j: { arrId: 1, idx: 0 } },
-      {
-        type: "Overwrite",
-        dest: { arrId: 1, idx: 0 },
-        old_val: 1,
-        new_val: 2,
-      },
+      { type: "Overwrite", dest: { arrId: 1, idx: 0 }, old_val: 1, new_val: 2 },
       { type: "EnterRange", arrId: 1, lo: 0, hi: 1 },
-      { type: "AddArray", arrId: 1, values: [null] },
       { type: "RemoveArray", arrId: 1 },
-      { type: "Overwrite", dest: main(0), old_val: 1, new_val: null },
     ]) {
       const controller = new AnimationController();
       await controller.initialize(eventEngine([event]), "fixture", [1, 2]);
-      expect(() => controller.stepForward()).toThrow("workspace support");
-      expect(controller.getState().array).toEqual([1, 2]);
+      expect(() => controller.stepForward()).toThrow();
+      expect(controller.getState().workspace.arrays.get(0).values).toEqual([
+        1, 2,
+      ]);
       expect(controller.getState().currentStep).toBe(0);
     }
   });

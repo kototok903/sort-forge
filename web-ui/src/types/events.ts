@@ -54,7 +54,7 @@ export interface ExitRangeEvent {
 export interface AddArrayEvent {
   type: "AddArray";
   arrId: ArrayId;
-  values: ElementValue[];
+  length: number;
 }
 
 /** Undo requires the contents retained in workspace state. */

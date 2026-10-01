@@ -1,8 +1,8 @@
 import type { SortEvent } from "@/types/events";
 import type { ISortEngine } from "@/engines/types";
 import type { Highlight, RenderState, IRenderer } from "@/renderer/types";
-import { inverseEvent, MAIN_ARRAY_ID } from "@/types/events";
-import type { ElementRef, ElementValue } from "@/types/events";
+import { applyWorkspaceEvent, createWorkspace } from "@/workspace/reducer";
+import type { WorkspaceState } from "@/workspace/types";
 import {
   BASE_EVENTS_PER_SECOND,
   SPEED_DEFAULT,
@@ -21,7 +21,7 @@ export interface ControllerState {
   currentStep: number;
   totalSteps: number;
   speed: number;
-  array: number[];
+  workspace: WorkspaceState;
 }
 
 type StateListener = (state: ControllerState) => void;
@@ -33,9 +33,9 @@ export class AnimationController {
   private engine: ISortEngine | null = null;
   private renderer: IRenderer | null = null;
 
-  // Array state
+  // Workspace state
   private initialArray: number[] = [];
-  private array: number[] = [];
+  private workspace: WorkspaceState = createWorkspace([]);
   private minValue = 0;
   private maxValue = 1;
 
@@ -53,9 +53,6 @@ export class AnimationController {
 
   // Visual state tracking
   private highlights: Highlight[] = [];
-  private activeRange: { lo: number; hi: number } | null = null;
-  private rangeStack: { lo: number; hi: number }[] = [];
-  private isSorted = false;
 
   // Listeners
   private listeners: Set<StateListener> = new Set();
@@ -83,7 +80,7 @@ export class AnimationController {
 
     this.engine = engine;
     this.initialArray = [...array];
-    this.resetArrayState(array);
+    this.resetWorkspaceState(array);
     this.updateMinMax(array);
     this.soundEngine.setValueRange(this.minValue, this.maxValue);
 
@@ -146,7 +143,7 @@ export class AnimationController {
 
   /** Reset to initial state */
   reset(): void {
-    this.resetArrayState(this.initialArray);
+    this.resetWorkspaceState(this.initialArray);
     this.currentStep = 0;
     this.engine?.reset();
     if (this.engine) {
@@ -209,8 +206,8 @@ export class AnimationController {
     const event = this.engine.getEventAt(targetStep);
     if (!event) return;
 
+    applyWorkspaceEvent(this.workspace, event, "backward");
     this.currentStep = targetStep;
-    this.applyInverseEvent(event);
     this.applyVisualStateForStep(this.currentStep);
     this.engine.seek(this.currentStep);
 
@@ -228,12 +225,12 @@ export class AnimationController {
 
     const targetStep = Math.max(0, Math.min(step, this.totalSteps));
 
-    this.resetArrayState(this.initialArray);
+    this.resetWorkspaceState(this.initialArray);
 
     for (let i = 0; i < targetStep; i++) {
       const event = this.engine.getEventAt(i);
       if (event) {
-        this.applyEventToArray(event);
+        applyWorkspaceEvent(this.workspace, event);
       }
     }
 
@@ -280,7 +277,7 @@ export class AnimationController {
       currentStep: this.currentStep,
       totalSteps: this.totalSteps,
       speed: this.speed,
-      array: this.array,
+      workspace: this.workspace,
     };
   }
 
@@ -333,8 +330,8 @@ export class AnimationController {
           const batch = this.engine.getNextEvents(eventsToProcess);
           let lastEvent: SortEvent | null = null;
           for (const event of batch) {
-            this.soundEngine.playEvent(event, this.array);
-            this.applyEventToArray(event);
+            this.soundEngine.playEvent(event, this.workspace);
+            applyWorkspaceEvent(this.workspace, event);
             this.currentStep++;
             lastEvent = event;
           }
@@ -355,8 +352,8 @@ export class AnimationController {
               break;
             }
 
+            applyWorkspaceEvent(this.workspace, event, "backward");
             this.currentStep = targetStep;
-            this.applyInverseEvent(event);
             appliedBackward = true;
           }
           if (appliedBackward) {
@@ -404,81 +401,12 @@ export class AnimationController {
   }
 
   private applyEvent(event: SortEvent): void {
-    this.soundEngine.playEvent(event, this.array);
-    this.applyEventToArray(event);
+    this.soundEngine.playEvent(event, this.workspace);
+    applyWorkspaceEvent(this.workspace, event);
     this.applyVisualState(event);
   }
 
-  // Main-only adapter until step 2 introduces retained workspace state.
-  private mainIndex(ref: ElementRef): number {
-    if (ref.arrId !== MAIN_ARRAY_ID) {
-      throw new Error("Auxiliary array playback requires workspace support");
-    }
-    return ref.idx;
-  }
-
-  private mainValue(value: ElementValue): number {
-    if (value === null) {
-      throw new Error("Empty slot playback requires workspace support");
-    }
-    return value;
-  }
-
-  private applyInverseEvent(event: SortEvent): void {
-    const inverse = inverseEvent(event);
-    if (!inverse) {
-      throw new Error("Array lifecycle rewind requires workspace support");
-    }
-    this.applyEventToArray(inverse);
-  }
-
-  private applyEventToArray(event: SortEvent): void {
-    switch (event.type) {
-      case "Swap": {
-        const i = this.mainIndex(event.i);
-        const j = this.mainIndex(event.j);
-        const temp = this.array[i];
-        this.array[i] = this.array[j];
-        this.array[j] = temp;
-        break;
-      }
-      case "Overwrite": {
-        const idx = this.mainIndex(event.dest);
-        this.array[idx] = this.mainValue(event.new_val);
-        break;
-      }
-      case "Copy": {
-        this.mainIndex(event.src);
-        const idx = this.mainIndex(event.dest);
-        this.array[idx] = this.mainValue(event.new_val);
-        break;
-      }
-      case "Compare": {
-        this.mainIndex(event.i);
-        this.mainIndex(event.j);
-        break;
-      }
-      case "EnterRange":
-      case "ExitRange": {
-        if (event.arrId !== MAIN_ARRAY_ID) {
-          throw new Error("Auxiliary array ranges require workspace support");
-        }
-        if (event.type === "EnterRange") {
-          this.rangeStack.push({ lo: event.lo, hi: event.hi });
-        } else {
-          this.rangeStack.pop();
-        }
-        this.activeRange = this.rangeStack.at(-1) ?? null;
-        break;
-      }
-      case "AddArray":
-      case "RemoveArray":
-        throw new Error("Array lifecycle playback requires workspace support");
-    }
-  }
-
   private applyVisualState(event: SortEvent): void {
-    this.isSorted = false;
     this.highlights = [];
 
     switch (event.type) {
@@ -486,7 +414,7 @@ export class AnimationController {
         this.highlights = [
           {
             kind: "comparing",
-            indices: [this.mainIndex(event.i), this.mainIndex(event.j)],
+            elements: [event.i, event.j],
           },
         ];
         break;
@@ -494,25 +422,20 @@ export class AnimationController {
         this.highlights = [
           {
             kind: "swapping",
-            indices: [this.mainIndex(event.i), this.mainIndex(event.j)],
+            elements: [event.i, event.j],
           },
         ];
         break;
       case "Overwrite":
-        this.highlights = [
-          { kind: "writing", indices: [this.mainIndex(event.dest)] },
-        ];
+        this.highlights = [{ kind: "writing", elements: [event.dest] }];
         break;
       case "Copy":
         this.highlights = [
           {
             kind: "writing",
-            indices: [this.mainIndex(event.src), this.mainIndex(event.dest)],
+            elements: [event.src, event.dest],
           },
         ];
-        break;
-      case "Done":
-        this.isSorted = true;
         break;
     }
   }
@@ -521,7 +444,6 @@ export class AnimationController {
     if (!this.engine) return;
 
     if (step <= 0) {
-      this.isSorted = false;
       this.highlights = [];
       return;
     }
@@ -530,7 +452,6 @@ export class AnimationController {
     if (event) {
       this.applyVisualState(event);
     } else {
-      this.isSorted = false;
       this.highlights = [];
     }
   }
@@ -539,22 +460,17 @@ export class AnimationController {
     if (!this.renderer) return;
 
     const state: RenderState = {
-      array: this.array,
+      workspace: this.workspace,
       minValue: this.minValue,
       maxValue: this.maxValue,
       highlights: this.highlights,
-      isSorted: this.isSorted,
-      activeRange: this.activeRange,
     };
 
     this.renderer.render(state);
   }
 
-  private resetArrayState(array: number[]): void {
-    this.array = [...array];
-    this.activeRange = null;
-    this.rangeStack = [];
-    this.isSorted = false;
+  private resetWorkspaceState(array: number[]): void {
+    this.workspace = createWorkspace(array);
     this.highlights = [];
   }
 

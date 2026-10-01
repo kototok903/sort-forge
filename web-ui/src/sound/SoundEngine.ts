@@ -1,4 +1,5 @@
-import { MAIN_ARRAY_ID } from "@/types/events";
+import { readElement } from "@/workspace/reducer";
+import type { WorkspaceState } from "@/workspace/types";
 import type { SortEvent } from "@/types/events";
 import type { SoundConfig, EnvelopeParams } from "@/sound/types";
 import { DEFAULT_SOUND_CONFIG } from "@/sound/types";
@@ -76,20 +77,21 @@ export class SoundEngine {
   /**
    * Play sound for a sort event.
    */
-  playEvent(event: SortEvent, array: number[]): void {
+  playEvent(event: SortEvent, workspace: WorkspaceState): void {
     if (this.config.waveform === "none" || !this.audioCtx || !this.masterGain)
       return;
 
     const envelope = EVENT_ENVELOPES[event.type];
     if (!envelope) return;
 
-    // Main-only lookup until the workspace adapter is introduced in step 2.
+    // Resolve comparisons/swaps before mutation; assignments use captured values.
     switch (event.type) {
       case "Compare":
-      case "Swap":
-        if (event.j.arrId !== MAIN_ARRAY_ID) return;
-        this.playTone(array[event.j.idx], envelope);
+      case "Swap": {
+        const value = readElement(workspace, event.j);
+        if (value !== null) this.playTone(value, envelope);
         break;
+      }
       case "Overwrite":
       case "Copy":
         if (event.new_val === null) return;

@@ -1,6 +1,7 @@
 import type { HighlightKind, IRenderer, RenderState } from "@/renderer/types";
 import { DEFAULT_THEME_ID, THEMES } from "@/themes/themes";
 import type { ThemeVizColors } from "@/themes/types";
+import { getArray } from "@/workspace/reducer";
 
 /** Padding */
 const PADDING_TOP = 7;
@@ -69,8 +70,12 @@ export class CanvasRenderer implements IRenderer {
     const ctx = this.ctx;
     const colors = this.colors;
 
-    const { array, activeRange, minValue, maxValue, isSorted, highlights } =
-      state;
+    const { workspace, minValue, maxValue, highlights } = state;
+    // Step 3 will lay out auxiliary arrays; for now draw only main.
+    const main = getArray(workspace, workspace.mainArrayId);
+    const array = main.values;
+    const activeRange = main.rangeStack.at(-1) ?? null;
+    const isSorted = workspace.isSorted;
     const width = this.width;
     const height = this.height;
 
@@ -105,6 +110,7 @@ export class CanvasRenderer implements IRenderer {
       withGlow: boolean
     ) => {
       const value = array[index];
+      if (value === null) return;
       const normalizedValue = (value - minValue) / valueRange;
       const barHeight =
         barBaseHeight + normalizedValue * (maxBarHeight - barBaseHeight);
@@ -146,9 +152,10 @@ export class CanvasRenderer implements IRenderer {
       for (const highlight of highlights) {
         const hlColors = highlightColorMap[highlight.kind];
         if (!hlColors) continue;
-        for (const index of highlight.indices) {
-          if (index < 0 || index >= array.length) continue;
-          drawBar(index, hlColors, true);
+        for (const element of highlight.elements) {
+          if (element.arrId !== workspace.mainArrayId) continue;
+          if (element.idx < 0 || element.idx >= array.length) continue;
+          drawBar(element.idx, hlColors, true);
         }
       }
     }

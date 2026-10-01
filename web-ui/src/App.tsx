@@ -29,6 +29,7 @@ import { getIsModKey } from "@/utils";
 import { THEMES, applyTheme } from "@/themes/themes";
 import { useSettings } from "@/settings/useSettings";
 import type { SoundWaveform } from "@/sound/types";
+import { createWorkspace } from "@/workspace/reducer";
 
 function generateArray(size: number, distribution: Distribution): number[] {
   switch (distribution) {
@@ -82,7 +83,7 @@ function App() {
     currentStep: 0,
     totalSteps: 0,
     speed: SPEED_DEFAULT,
-    array: [],
+    workspace: createWorkspace([]),
   });
 
   // Loading state

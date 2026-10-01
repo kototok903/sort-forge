@@ -61,11 +61,11 @@ pub enum SortEvent {
         lo: usize,
         hi: usize,
     },
-    /// Every added array has a unique ID.
+    /// Create empty slots. Every added array has a unique ID.
     AddArray {
         #[serde(rename = "arrId")]
         arr_id: ArrayId,
-        values: Vec<ElementValue>,
+        length: usize,
     },
     RemoveArray {
         #[serde(rename = "arrId")]
@@ -207,7 +207,7 @@ mod tests {
         assert_eq!(
             SortEvent::AddArray {
                 arr_id: 1,
-                values: vec![None, Some(0)]
+                length: 2
             }
             .inverse(),
             None
@@ -235,7 +235,7 @@ mod tests {
             },
             SortEvent::AddArray {
                 arr_id: 1,
-                values: vec![None],
+                length: 1,
             },
             SortEvent::RemoveArray { arr_id: 1 },
         ] {
@@ -275,7 +275,7 @@ mod wasm_tests {
         let events = vec![
             SortEvent::AddArray {
                 arr_id: 1,
-                values: vec![None, Some(0)],
+                length: 2,
             },
             SortEvent::Compare {
                 i: auxiliary,
@@ -313,9 +313,8 @@ mod wasm_tests {
         let get =
             |object: &JsValue, key: &str| Reflect::get(object, &JsValue::from_str(key)).unwrap();
         let array = Array::from(&js);
-        let values = Array::from(&get(&array.get(0), "values"));
-        assert!(values.get(0).is_null());
-        assert_eq!(values.get(1).as_f64(), Some(0.0));
+        assert_eq!(get(&array.get(0), "length").as_f64(), Some(2.0));
+        assert!(get(&array.get(0), "values").is_undefined());
         for idx in [0, 5, 6, 7] {
             assert_eq!(get(&array.get(idx), "arrId").as_f64(), Some(1.0));
             assert!(get(&array.get(idx), "arr_id").is_undefined());
