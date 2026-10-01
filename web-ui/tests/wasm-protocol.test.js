@@ -17,7 +17,8 @@ initSync({
   ),
 });
 
-function checkMainProtocol(events, length) {
+function checkProtocol(events, length) {
+  const arrays = new Map([[0, length]]);
   for (const event of events) {
     let refs = [];
     switch (event.type) {
@@ -25,28 +26,45 @@ function checkMainProtocol(events, length) {
       case "Swap":
         refs = [event.i, event.j];
         break;
+      case "Copy":
       case "Overwrite":
-        refs = [event.dest];
-        expect(typeof event.old_val).toBe("number");
+        refs = event.type === "Copy" ? [event.src, event.dest] : [event.dest];
+        expect(
+          event.old_val === null || typeof event.old_val === "number"
+        ).toBe(true);
         expect(typeof event.new_val).toBe("number");
+        break;
+      case "AddArray":
+        expect(arrays.has(event.arrId)).toBe(false);
+        expect(event).toEqual({
+          type: "AddArray",
+          arrId: expect.any(Number),
+          length: expect.any(Number),
+        });
+        arrays.set(event.arrId, event.length);
+        break;
+      case "RemoveArray":
+        expect(arrays.delete(event.arrId)).toBe(true);
         break;
       case "EnterRange":
       case "ExitRange":
-        expect(event.arrId).toBe(0);
+        expect(arrays.has(event.arrId)).toBe(true);
         expect(event.lo).toBeGreaterThanOrEqual(0);
-        expect(event.hi).toBeLessThan(length);
+        expect(event.hi).toBeLessThan(arrays.get(event.arrId));
         break;
       case "Done":
         break;
       default:
-        throw new Error(
-          `Unexpected event before auxiliary instrumentation: ${event.type}`
-        );
+        throw new Error(`Unexpected event: ${event.type}`);
     }
     for (const ref of refs) {
-      expect(ref).toEqual({ arrId: 0, idx: expect.any(Number) });
+      expect(ref).toEqual({
+        arrId: expect.any(Number),
+        idx: expect.any(Number),
+      });
+      expect(arrays.has(ref.arrId)).toBe(true);
       expect(ref.idx).toBeGreaterThanOrEqual(0);
-      expect(ref.idx).toBeLessThan(length);
+      expect(ref.idx).toBeLessThan(arrays.get(ref.arrId));
     }
   }
 }
@@ -58,12 +76,13 @@ describe("rebuilt Wasm protocol and controller compatibility", () => {
     test(`pregen ${algorithm}: serialized references, replay, seek, and rewind`, async () => {
       for (const input of inputs) {
         const result = pregen_sort_with_result(algorithm, input);
-        checkMainProtocol(result.events, input.length);
+        checkProtocol(result.events, input.length);
         expect(result.sorted_array).toEqual([...input].sort((a, b) => a - b));
         const engine = new PregenEngine();
         const controller = new AnimationController();
         await controller.initialize(engine, algorithm, input);
         const snapshots = [[...input]];
+        const workspaces = [structuredClone(controller.getState().workspace)];
         for (const event of engine.getAllEvents()) {
           if (event.type === "Overwrite") {
             expect(
@@ -73,6 +92,7 @@ describe("rebuilt Wasm protocol and controller compatibility", () => {
             ).toBe(event.old_val);
           }
           controller.stepForward();
+          workspaces.push(structuredClone(controller.getState().workspace));
           snapshots.push([
             ...controller.getState().workspace.arrays.get(0).values,
           ]);
@@ -82,6 +102,7 @@ describe("rebuilt Wasm protocol and controller compatibility", () => {
         );
         for (let step = snapshots.length - 2; step >= 0; step--) {
           controller.stepBackward();
+          expect(controller.getState().workspace).toEqual(workspaces[step]);
           expect(controller.getState().workspace.arrays.get(0).values).toEqual(
             snapshots[step]
           );
@@ -109,7 +130,7 @@ describe("rebuilt Wasm protocol and controller compatibility", () => {
       const engine = new LiveEngine();
       const controller = new AnimationController();
       await controller.initialize(engine, algorithm, input);
-      checkMainProtocol(engine.getAllEvents(), input.length);
+      checkProtocol(engine.getAllEvents(), input.length);
       let steps = 0;
       while (controller.getState().playbackState !== "done") {
         controller.stepForward();
@@ -125,5 +146,59 @@ describe("rebuilt Wasm protocol and controller compatibility", () => {
       controller.stepForward();
       expect(controller.getState().currentStep).toBe(1);
     });
+  }
+});
+
+test("merge's reusable buffer restores full workspace at every seek and rewind position", async () => {
+  for (const input of [
+    [2, 1],
+    [1, 1],
+    [4, 1, 3, 1, 0],
+    [-2, 5, 0, -2, 1, 7, 3],
+  ]) {
+    const engine = new PregenEngine();
+    const controller = new AnimationController();
+    await controller.initialize(engine, "merge", input);
+    const events = engine.getAllEvents();
+    expect(events.filter((event) => event.type === "AddArray")).toEqual([
+      { type: "AddArray", arrId: 1, length: input.length },
+    ]);
+    expect(events.filter((event) => event.type === "RemoveArray")).toEqual([
+      { type: "RemoveArray", arrId: 1 },
+    ]);
+    expect(events.some((event) => event.type === "Overwrite")).toBe(false);
+    expect(
+      events.some(
+        (event) => event.type === "Copy" && event.old_val === event.new_val
+      )
+    ).toBe(true);
+    for (const event of events.filter((event) => event.type === "Compare")) {
+      expect(event.i.arrId).toBe(1);
+      expect(event.j.arrId).toBe(1);
+    }
+    const states = [structuredClone(controller.getState().workspace)];
+    for (const _ of events) {
+      controller.stepForward();
+      states.push(structuredClone(controller.getState().workspace));
+    }
+    expect(states.at(-1).arrays.get(0).values).toEqual(
+      [...input].sort((a, b) => a - b)
+    );
+    expect(states.at(-1).arrays.get(1).visible).toBe(false);
+    controller.stepBackward();
+    controller.stepBackward();
+    expect(controller.getState().workspace.arrays.get(1).visible).toBe(true);
+    expect(controller.getState().workspace.arrays.get(1).values).toEqual(
+      states.at(-1).arrays.get(1).values
+    );
+    for (let step = 0; step <= events.length; step++) {
+      controller.seekTo(step);
+      expect(controller.getState().workspace).toEqual(states[step]);
+    }
+    for (let step = events.length - 1; step >= 0; step--) {
+      controller.stepBackward();
+      expect(controller.getState().workspace).toEqual(states[step]);
+    }
+    expect(controller.getState().workspace.arrays.size).toBe(1);
   }
 });

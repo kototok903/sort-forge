@@ -1,13 +1,8 @@
 import type { HighlightKind, IRenderer, RenderState } from "@/renderer/types";
 import { DEFAULT_THEME_ID, THEMES } from "@/themes/themes";
 import type { ThemeVizColors } from "@/themes/types";
-import { getArray } from "@/workspace/reducer";
-
-/** Padding */
-const PADDING_TOP = 7;
-const PADDING_BOTTOM = 0;
-const PADDING_LEFT = 7;
-const PADDING_RIGHT = 7;
+import { layoutArrays } from "@/renderer/layout";
+import type { ArrayLayout } from "@/renderer/layout";
 
 /** Gap sizing for bars */
 const BAR_BORDER_WIDTH = 1;
@@ -67,42 +62,48 @@ export class CanvasRenderer implements IRenderer {
 
   render(state: RenderState): void {
     if (!this.canvas || !this.ctx) return;
-    const ctx = this.ctx;
-    const colors = this.colors;
-
-    const { workspace, minValue, maxValue, highlights } = state;
-    // Step 3 will lay out auxiliary arrays; for now draw only main.
-    const main = getArray(workspace, workspace.mainArrayId);
-    const array = main.values;
-    const activeRange = main.rangeStack.at(-1) ?? null;
-    const isSorted = workspace.isSorted;
-    const width = this.width;
-    const height = this.height;
-
     this.clear();
+    const layouts = layoutArrays(state.workspace, this.width, this.height);
+    for (const layout of layouts) {
+      this.drawArray(state, layout, layouts.length > 1);
+    }
+  }
 
-    if (array.length === 0 || width === 0 || height === 0) return;
+  private drawArray(
+    state: RenderState,
+    layout: ArrayLayout,
+    clip: boolean
+  ): void {
+    const ctx = this.ctx!;
+    const colors = this.colors;
+    const { workspace, minValue, maxValue, highlights } = state;
+    const { array: storage, x: originX, y: originY, width, height } = layout;
+    const array = storage.values;
+    const activeRange = storage.rangeStack.at(-1) ?? null;
+    const isSorted = storage.id === workspace.mainArrayId && workspace.isSorted;
+    if (array.length === 0 || width <= 0 || height <= 0) return;
 
     const barCount = array.length;
     const gap = BAR_GAP_ENABLED
       ? Math.min(BAR_GAP_MAX, (width / barCount) * BAR_GAP_RATIO)
       : 0;
-    const barWidth =
-      (width - gap * (barCount - 1) - PADDING_LEFT - PADDING_RIGHT) / barCount;
+    const barWidth = (width - gap * (barCount - 1)) / barCount;
     const valueRange = maxValue - minValue || 1;
     const maxBarHeight = Math.max(
       0,
-      height -
-        ACTIVE_RANGE_LINE_HEIGHT -
-        ACTIVE_RANGE_LINE_GAP -
-        PADDING_TOP -
-        PADDING_BOTTOM
+      height - ACTIVE_RANGE_LINE_HEIGHT - ACTIVE_RANGE_LINE_GAP
     );
     const barBaseHeight = Math.max(
       BAR_BASE_HEIGHT_MIN,
       Math.min(BAR_BASE_HEIGHT_MAX, maxBarHeight * BAR_BASE_HEIGHT_RATIO)
     );
     if (maxBarHeight < barBaseHeight) return;
+    ctx.save();
+    if (clip) {
+      ctx.beginPath();
+      ctx.rect(originX, originY, width, height);
+      ctx.clip();
+    }
 
     const drawBar = (
       index: number,
@@ -114,8 +115,8 @@ export class CanvasRenderer implements IRenderer {
       const normalizedValue = (value - minValue) / valueRange;
       const barHeight =
         barBaseHeight + normalizedValue * (maxBarHeight - barBaseHeight);
-      const x = PADDING_LEFT + index * (barWidth + gap);
-      const y = PADDING_TOP + maxBarHeight - barHeight;
+      const x = originX + index * (barWidth + gap);
+      const y = originY + maxBarHeight - barHeight;
 
       if (withGlow && barColors.glow) {
         ctx.save();
@@ -153,7 +154,7 @@ export class CanvasRenderer implements IRenderer {
         const hlColors = highlightColorMap[highlight.kind];
         if (!hlColors) continue;
         for (const element of highlight.elements) {
-          if (element.arrId !== workspace.mainArrayId) continue;
+          if (element.arrId !== storage.id) continue;
           if (element.idx < 0 || element.idx >= array.length) continue;
           drawBar(element.idx, hlColors, true);
         }
@@ -161,11 +162,11 @@ export class CanvasRenderer implements IRenderer {
     }
 
     if (activeRange) {
-      const lineX = PADDING_LEFT + activeRange.lo * (barWidth + gap);
+      const lineX = originX + activeRange.lo * (barWidth + gap);
       const lineWidth =
         (activeRange.hi - activeRange.lo + 1) * barWidth +
         (activeRange.hi - activeRange.lo) * gap;
-      const lineY = height - PADDING_BOTTOM - ACTIVE_RANGE_LINE_HEIGHT;
+      const lineY = originY + height - ACTIVE_RANGE_LINE_HEIGHT;
 
       ctx.save();
       ctx.shadowColor = colors.range.glow;
@@ -174,5 +175,6 @@ export class CanvasRenderer implements IRenderer {
       ctx.fillRect(lineX, lineY, lineWidth, ACTIVE_RANGE_LINE_HEIGHT);
       ctx.restore();
     }
+    ctx.restore();
   }
 }
