@@ -21,9 +21,9 @@ test("top buffers share slot widths, preserve empty positions, and leave unused 
   const workspace = workspaceWith([2, 3]);
   workspace.arrays.get(1).values[0] = 10;
   const [main, left, right] = layoutArrays(workspace, 114, 107);
-  expect(main).toMatchObject({ x: 7, y: 60.5, width: 100, height: 46.5 });
-  expect(left).toMatchObject({ x: 7, y: 7, width: 20, height: 46.5 });
-  expect(right).toMatchObject({ x: 34, y: 7, width: 30, height: 46.5 });
+  expect(main).toMatchObject({ x: 7, y: 45, width: 100, height: 62 });
+  expect(left).toMatchObject({ x: 7, y: 7, width: 20, height: 31 });
+  expect(right).toMatchObject({ x: 34, y: 7, width: 30, height: 31 });
   expect(main.y - (left.y + left.height)).toBe(ARRAY_PADDING);
   expect(right.x + right.width).toBeLessThan(main.x + main.width);
   workspace.arrays.get(1).values.fill(null);
@@ -122,10 +122,10 @@ test("renderer targets highlights and ranges per array, skips nulls, and sorts o
     const colors = THEMES[DEFAULT_THEME_ID].viz;
     const writes = draws.filter((draw) => draw.color === colors.writing.fill);
     expect(new Set(writes.map(({ x, y }) => `${x},${y}`)).size).toBe(2);
-    expect(writes.some(({ y }) => y === 60.5)).toBe(true);
+    expect(writes.some(({ y }) => y === 45)).toBe(true);
     expect(writes.some(({ y }) => y === 7)).toBe(true);
     expect(draws.filter((draw) => draw.color === colors.range.fill)).toEqual([
-      { x: 7, y: 50.5, width: 20, height: 3, color: colors.range.fill },
+      { x: 7, y: 35, width: 20, height: 3, color: colors.range.fill },
     ]);
     expect(clips).toBe(2);
     expect(

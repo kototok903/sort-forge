@@ -161,20 +161,15 @@ test("merge's reusable buffer restores full workspace at every seek and rewind p
     await controller.initialize(engine, "merge", input);
     const events = engine.getAllEvents();
     expect(events.filter((event) => event.type === "AddArray")).toEqual([
-      { type: "AddArray", arrId: 1, length: input.length },
+      { type: "AddArray", arrId: 1, length: Math.ceil(input.length / 2) },
     ]);
     expect(events.filter((event) => event.type === "RemoveArray")).toEqual([
       { type: "RemoveArray", arrId: 1 },
     ]);
     expect(events.some((event) => event.type === "Overwrite")).toBe(false);
-    expect(
-      events.some(
-        (event) => event.type === "Copy" && event.old_val === event.new_val
-      )
-    ).toBe(true);
     for (const event of events.filter((event) => event.type === "Compare")) {
       expect(event.i.arrId).toBe(1);
-      expect(event.j.arrId).toBe(1);
+      expect(event.j.arrId).toBe(0);
     }
     const states = [structuredClone(controller.getState().workspace)];
     for (const _ of events) {
@@ -201,4 +196,38 @@ test("merge's reusable buffer restores full workspace at every seek and rewind p
     }
     expect(controller.getState().workspace.arrays.size).toBe(1);
   }
+});
+
+test("merge chooses the buffered left value on ties and leaves the right tail untouched", () => {
+  for (const input of [
+    [1, 1],
+    [1, 2],
+  ]) {
+    const result = pregen_sort_with_result("merge", input);
+    expect(result.sorted_array).toEqual(input);
+    expect(result.events.filter((event) => event.type === "Copy")).toEqual([
+      {
+        type: "Copy",
+        src: { arrId: 0, idx: 0 },
+        dest: { arrId: 1, idx: 0 },
+        old_val: null,
+        new_val: 1,
+      },
+      {
+        type: "Copy",
+        src: { arrId: 1, idx: 0 },
+        dest: { arrId: 0, idx: 0 },
+        old_val: 1,
+        new_val: 1,
+      },
+    ]);
+  }
+  const reverse = pregen_sort_with_result("merge", [2, 1]);
+  expect(reverse.events).toContainEqual({
+    type: "Copy",
+    src: { arrId: 0, idx: 1 },
+    dest: { arrId: 0, idx: 0 },
+    old_val: 2,
+    new_val: 1,
+  });
 });

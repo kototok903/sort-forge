@@ -64,9 +64,10 @@ export function layoutArrays(
     ];
   }
 
-  const bandHeight = Math.max(0, (availableHeight - ARRAY_PADDING) / 2);
-  mainRect.y += bandHeight + ARRAY_PADDING;
-  mainRect.height = bandHeight;
+  const bandsHeight = Math.max(0, availableHeight - ARRAY_PADDING);
+  const topHeight = bandsHeight / 3;
+  mainRect.y += topHeight + ARRAY_PADDING;
+  mainRect.height = bandsHeight - topHeight;
   const mainSlotWidth = availableWidth / Math.max(1, main.values.length);
   const topSlotsWidth = Math.max(
     0,
@@ -85,7 +86,7 @@ export function layoutArrays(
         x,
         y: ARRAY_PADDING,
         width: array.values.length * auxiliarySlotWidth,
-        height: bandHeight,
+        height: topHeight,
       };
       x += rect.width + ARRAY_PADDING;
       return rect;
