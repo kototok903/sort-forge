@@ -1,10 +1,11 @@
-import type { SortEvent } from "@/types/events";
+import type { PlaybackEvent } from "@/types/playback";
 import type { ISortEngine } from "@/engines/types";
 import type { Highlight, RenderState, IRenderer } from "@/renderer/types";
 import { applyWorkspaceEvent, createWorkspace } from "@/workspace/reducer";
 import type { WorkspaceState } from "@/workspace/types";
 import {
   BASE_EVENTS_PER_SECOND,
+  COMPLETION_EVENTS_PER_SECOND,
   SPEED_DEFAULT,
   SPEED_MAX,
   SPEED_MIN,
@@ -22,6 +23,7 @@ export interface ControllerState {
   totalSteps: number;
   speed: number;
   workspace: WorkspaceState;
+  completedCount: number;
 }
 
 type StateListener = (state: ControllerState) => void;
@@ -44,6 +46,8 @@ export class AnimationController {
   private direction: PlaybackDirection = "forward";
   private currentStep = 0;
   private totalSteps = 0;
+  // Live streams reveal this boundary after their final event is consumed.
+  private sortSteps: number | null = null;
   private speed = SPEED_DEFAULT;
 
   // Animation
@@ -86,7 +90,8 @@ export class AnimationController {
 
     await engine.initialize(algorithm, array);
 
-    this.totalSteps = engine.getTotalEvents();
+    this.sortSteps = engine.canSeek ? engine.getTotalEvents() : null;
+    this.updateTotalSteps();
     this.currentStep = 0;
     this.playbackState = "idle";
 
@@ -100,7 +105,7 @@ export class AnimationController {
       this.reset();
     }
     if (this.engine) {
-      this.engine.seek(this.currentStep);
+      this.seekEngine();
     }
     this.direction = "forward";
     this.playbackState = "playing";
@@ -147,7 +152,10 @@ export class AnimationController {
     this.currentStep = 0;
     this.engine?.reset();
     if (this.engine) {
-      this.totalSteps = this.engine.getTotalEvents();
+      this.sortSteps = this.engine.canSeek
+        ? this.engine.getTotalEvents()
+        : null;
+      this.updateTotalSteps();
     }
 
     if (this.playbackState === "done") {
@@ -162,37 +170,12 @@ export class AnimationController {
   stepForward(): void {
     if (!this.engine) return;
 
-    if (this.engine.canSeek) {
-      if (this.currentStep >= this.totalSteps) return;
-
-      const event = this.engine.getEventAt(this.currentStep);
-      if (!event) return;
-
+    const event = this.getNextPlaybackEvents(1)[0];
+    if (event) {
       this.applyEvent(event);
       this.currentStep++;
-      this.engine.seek(this.currentStep);
-
-      if (this.currentStep >= this.totalSteps) {
-        this.playbackState = "done";
-        this.stopAnimationLoop();
-      }
-    } else {
-      const batch = this.engine.getNextEvents(1);
-      if (batch.length === 0) {
-        if (this.engine.isDone()) {
-          this.playbackState = "done";
-          this.stopAnimationLoop();
-          this.totalSteps = this.currentStep;
-        }
-        this.notifyListeners();
-        this.render();
-        return;
-      }
-
-      this.applyEvent(batch[0]);
-      this.currentStep++;
-      this.totalSteps = this.engine.getTotalEvents();
     }
+    this.checkForwardCompletion();
 
     this.notifyListeners();
     this.render();
@@ -203,13 +186,15 @@ export class AnimationController {
     if (!this.engine || this.currentStep <= 0) return;
 
     const targetStep = this.currentStep - 1;
-    const event = this.engine.getEventAt(targetStep);
+    const event = this.getPlaybackEventAt(targetStep);
     if (!event) return;
 
-    applyWorkspaceEvent(this.workspace, event, "backward");
+    if (event.type !== "CompleteElement") {
+      applyWorkspaceEvent(this.workspace, event, "backward");
+    }
     this.currentStep = targetStep;
     this.applyVisualStateForStep(this.currentStep);
-    this.engine.seek(this.currentStep);
+    this.seekEngine();
 
     if (this.playbackState === "done") {
       this.playbackState = "paused";
@@ -227,7 +212,7 @@ export class AnimationController {
 
     this.resetWorkspaceState(this.initialArray);
 
-    for (let i = 0; i < targetStep; i++) {
+    for (let i = 0; i < Math.min(targetStep, this.sortSteps ?? 0); i++) {
       const event = this.engine.getEventAt(i);
       if (event) {
         applyWorkspaceEvent(this.workspace, event);
@@ -236,7 +221,7 @@ export class AnimationController {
 
     // Apply visual state for the current event
     if (targetStep > 0 && targetStep <= this.totalSteps) {
-      const event = this.engine.getEventAt(targetStep - 1);
+      const event = this.getPlaybackEventAt(targetStep - 1);
       if (event) {
         this.applyVisualState(event);
       }
@@ -244,7 +229,7 @@ export class AnimationController {
 
     this.currentStep = targetStep;
     if (this.engine.canSeek) {
-      this.engine.seek(this.currentStep);
+      this.seekEngine();
     }
 
     if (this.currentStep >= this.totalSteps) {
@@ -278,6 +263,7 @@ export class AnimationController {
       totalSteps: this.totalSteps,
       speed: this.speed,
       workspace: this.workspace,
+      completedCount: this.getCompletedCount(),
     };
   }
 
@@ -309,6 +295,82 @@ export class AnimationController {
 
   // --- Private methods ---
 
+  private getCompletedCount(): number {
+    return this.sortSteps === null
+      ? 0
+      : Math.max(
+          0,
+          Math.min(this.initialArray.length, this.currentStep - this.sortSteps)
+        );
+  }
+
+  private isSweeping(): boolean {
+    if (this.sortSteps === null) return false;
+    return this.direction === "forward"
+      ? this.currentStep >= this.sortSteps
+      : this.currentStep > this.sortSteps;
+  }
+
+  private updateTotalSteps(): void {
+    this.totalSteps =
+      (this.sortSteps ?? this.engine?.getTotalEvents() ?? 0) +
+      this.initialArray.length;
+  }
+
+  private seekEngine(): void {
+    this.engine?.seek(
+      Math.min(this.currentStep, this.sortSteps ?? this.currentStep)
+    );
+  }
+
+  private getPlaybackEventAt(step: number): PlaybackEvent | null {
+    if (this.sortSteps !== null && step >= this.sortSteps) {
+      const idx = step - this.sortSteps;
+      return idx < this.initialArray.length
+        ? { type: "CompleteElement", idx }
+        : null;
+    }
+    return this.engine?.getEventAt(step) ?? null;
+  }
+
+  /** Generate the completion tail on demand without storing another event array. */
+  private getNextPlaybackEvents(count: number): PlaybackEvent[] {
+    if (!this.engine) return [];
+    if (this.sortSteps !== null && this.currentStep >= this.sortSteps) {
+      const idx = this.getCompletedCount();
+      const length = Math.min(count, this.initialArray.length - idx);
+      return Array.from({ length }, (_, offset) => ({
+        type: "CompleteElement",
+        idx: idx + offset,
+      }));
+    }
+
+    let batch: PlaybackEvent[];
+    if (this.engine.canSeek) {
+      const length = Math.min(count, (this.sortSteps ?? 0) - this.currentStep);
+      batch = [];
+      for (let i = 0; i < length; i++) {
+        const event = this.engine.getEventAt(this.currentStep + i);
+        if (!event) break;
+        batch.push(event);
+      }
+      this.engine.seek(this.currentStep + batch.length);
+    } else {
+      batch = this.engine.getNextEvents(count);
+      if (this.engine.isDone())
+        this.sortSteps = this.currentStep + batch.length;
+    }
+    this.updateTotalSteps();
+    return batch;
+  }
+
+  private checkForwardCompletion(): void {
+    if (this.sortSteps !== null && this.currentStep >= this.totalSteps) {
+      this.playbackState = "done";
+      this.stopAnimationLoop();
+    }
+  }
+
   private startAnimationLoop(): void {
     if (this.animationId !== null) return;
 
@@ -318,7 +380,11 @@ export class AnimationController {
       const deltaTime = time - this.lastFrameTime;
       this.lastFrameTime = time;
 
-      const msPerEvent = 1000 / (BASE_EVENTS_PER_SECOND * this.speed);
+      const sweeping = this.isSweeping();
+      const rate = sweeping
+        ? COMPLETION_EVENTS_PER_SECOND
+        : BASE_EVENTS_PER_SECOND * this.speed;
+      const msPerEvent = 1000 / rate;
       this.accumulatedTime += deltaTime;
 
       const eventsToProcess = Math.floor(this.accumulatedTime / msPerEvent);
@@ -327,11 +393,13 @@ export class AnimationController {
 
         if (this.direction === "forward") {
           // Forward playback (apply visuals once per frame)
-          const batch = this.engine.getNextEvents(eventsToProcess);
-          let lastEvent: SortEvent | null = null;
+          const batch = this.getNextPlaybackEvents(eventsToProcess);
+          let lastEvent: PlaybackEvent | null = null;
           for (const event of batch) {
             this.soundEngine.playEvent(event, this.workspace);
-            applyWorkspaceEvent(this.workspace, event);
+            if (event.type !== "CompleteElement") {
+              applyWorkspaceEvent(this.workspace, event);
+            }
             this.currentStep++;
             lastEvent = event;
           }
@@ -341,9 +409,11 @@ export class AnimationController {
         } else {
           // Backward playback
           let appliedBackward = false;
-          for (let i = 0; i < eventsToProcess && this.currentStep > 0; i++) {
+          // Stop at the phase boundary so sort events keep their own timing.
+          const limit = sweeping ? this.getCompletedCount() : this.currentStep;
+          for (let i = 0; i < Math.min(eventsToProcess, limit); i++) {
             const targetStep = this.currentStep - 1;
-            const event = this.engine.getEventAt(targetStep);
+            const event = this.getPlaybackEventAt(targetStep);
             if (!event) {
               if (!this.engine.canSeek) {
                 this.playbackState = "paused";
@@ -352,31 +422,26 @@ export class AnimationController {
               break;
             }
 
-            applyWorkspaceEvent(this.workspace, event, "backward");
+            if (event.type !== "CompleteElement") {
+              applyWorkspaceEvent(this.workspace, event, "backward");
+            }
             this.currentStep = targetStep;
             appliedBackward = true;
           }
           if (appliedBackward) {
             this.applyVisualStateForStep(this.currentStep);
           }
-          this.engine.seek(this.currentStep);
+          this.seekEngine();
         }
       }
 
-      if (this.engine && !this.engine.canSeek) {
-        this.totalSteps = this.engine.getTotalEvents();
-      }
+      // Start a fresh timing interval when switching between sorting and sweeping.
+      if (sweeping !== this.isSweeping()) this.accumulatedTime = 0;
+      this.updateTotalSteps();
 
       // Check for completion
       if (this.direction === "forward") {
-        if (this.engine?.canSeek && this.currentStep >= this.totalSteps) {
-          this.playbackState = "done";
-          this.stopAnimationLoop();
-        } else if (!this.engine?.canSeek && this.engine?.isDone()) {
-          this.playbackState = "done";
-          this.stopAnimationLoop();
-          this.totalSteps = this.currentStep;
-        }
+        this.checkForwardCompletion();
       } else if (this.direction === "backward" && this.currentStep <= 0) {
         this.playbackState = "paused";
         this.stopAnimationLoop();
@@ -400,13 +465,15 @@ export class AnimationController {
     }
   }
 
-  private applyEvent(event: SortEvent): void {
+  private applyEvent(event: PlaybackEvent): void {
     this.soundEngine.playEvent(event, this.workspace);
-    applyWorkspaceEvent(this.workspace, event);
+    if (event.type !== "CompleteElement") {
+      applyWorkspaceEvent(this.workspace, event);
+    }
     this.applyVisualState(event);
   }
 
-  private applyVisualState(event: SortEvent): void {
+  private applyVisualState(event: PlaybackEvent): void {
     this.highlights = [];
 
     switch (event.type) {
@@ -448,7 +515,7 @@ export class AnimationController {
       return;
     }
 
-    const event = this.engine.getEventAt(step - 1);
+    const event = this.getPlaybackEventAt(step - 1);
     if (event) {
       this.applyVisualState(event);
     } else {
@@ -461,6 +528,7 @@ export class AnimationController {
 
     const state: RenderState = {
       workspace: this.workspace,
+      completedCount: this.getCompletedCount(),
       minValue: this.minValue,
       maxValue: this.maxValue,
       highlights: this.highlights,

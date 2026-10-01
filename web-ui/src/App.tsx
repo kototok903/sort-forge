@@ -84,6 +84,7 @@ function App() {
     totalSteps: 0,
     speed: SPEED_DEFAULT,
     workspace: createWorkspace([]),
+    completedCount: 0,
   });
 
   // Loading state

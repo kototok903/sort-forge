@@ -1,6 +1,6 @@
 import { readElement } from "@/workspace/reducer";
 import type { WorkspaceState } from "@/workspace/types";
-import type { SortEvent } from "@/types/events";
+import type { PlaybackEvent } from "@/types/playback";
 import type { SoundConfig, EnvelopeParams } from "@/sound/types";
 import { DEFAULT_SOUND_CONFIG } from "@/sound/types";
 
@@ -15,6 +15,7 @@ const EVENT_ENVELOPES: Record<string, EnvelopeParams> = {
   Swap: { attack: 0.01, decay: 0.08, sustain: 0, release: 0.02 },
   Overwrite: { attack: 0.02, decay: 0.06, sustain: 0, release: 0.02 },
   Copy: { attack: 0.02, decay: 0.06, sustain: 0, release: 0.02 },
+  CompleteElement: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.01 },
 };
 
 /**
@@ -77,7 +78,7 @@ export class SoundEngine {
   /**
    * Play sound for a sort event.
    */
-  playEvent(event: SortEvent, workspace: WorkspaceState): void {
+  playEvent(event: PlaybackEvent, workspace: WorkspaceState): void {
     if (this.config.waveform === "none" || !this.audioCtx || !this.masterGain)
       return;
 
@@ -86,6 +87,14 @@ export class SoundEngine {
 
     // Resolve comparisons/swaps before mutation; assignments use captured values.
     switch (event.type) {
+      case "CompleteElement": {
+        const value = readElement(workspace, {
+          arrId: workspace.mainArrayId,
+          idx: event.idx,
+        });
+        if (value !== null) this.playTone(value, envelope);
+        break;
+      }
       case "Compare":
       case "Swap": {
         const value = readElement(workspace, event.j);

@@ -28,3 +28,4 @@ export const SPEED_MAX = 10;
 export const SPEED_STEP = 0.1;
 
 export const BASE_EVENTS_PER_SECOND = 60;
+export const COMPLETION_EVENTS_PER_SECOND = 240;

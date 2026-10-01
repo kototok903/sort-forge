@@ -76,7 +76,7 @@ export class CanvasRenderer implements IRenderer {
   ): void {
     const ctx = this.ctx!;
     const colors = this.colors;
-    const { workspace, minValue, maxValue, highlights } = state;
+    const { workspace, minValue, maxValue, highlights, completedCount } = state;
     const { array: storage, x: originX, y: originY, width, height } = layout;
     const array = storage.values;
     const activeRange = storage.rangeStack.at(-1) ?? null;
@@ -135,9 +135,10 @@ export class CanvasRenderer implements IRenderer {
       ctx.strokeRect(x, y, barWidth, barHeight);
     };
 
-    const baseColors = isSorted ? colors.sorted : colors.default;
     for (let i = 0; i < array.length; i++) {
-      drawBar(i, baseColors, false);
+      const complete =
+        storage.id === workspace.mainArrayId && i < completedCount;
+      drawBar(i, complete ? colors.sorted : colors.default, false);
     }
 
     if (!isSorted) {

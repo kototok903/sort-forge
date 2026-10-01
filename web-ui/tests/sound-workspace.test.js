@@ -121,3 +121,30 @@ test("controller plays swap sound before changing the auxiliary value", async ()
     expect(controller.getState().workspace.arrays.get(1).values).toEqual([20]);
   });
 });
+
+test("completion plays each main-array value and seek/rewind remain silent", async () => {
+  await withAudioContext(async (frequencies) => {
+    const events = [{ type: "Done" }];
+    const engine = {
+      canSeek: true,
+      initialize() {},
+      reset() {},
+      seek() {},
+      getTotalEvents: () => events.length,
+      getEventAt: (idx) => events[idx],
+    };
+    const controller = new AnimationController();
+    await controller.initialize(engine, "fixture", [0, 20, 100]);
+    controller.initSound();
+    controller.stepForward();
+    expect(frequencies).toEqual([]);
+    for (let i = 0; i < 3; i++) controller.stepForward();
+    expect(frequencies).toEqual([200, 400, 1200]);
+    controller.stepBackward();
+    controller.seekTo(2);
+    expect(frequencies).toEqual([200, 400, 1200]);
+    controller.setSoundConfig({ waveform: "none" });
+    controller.stepForward();
+    expect(frequencies).toEqual([200, 400, 1200]);
+  });
+});

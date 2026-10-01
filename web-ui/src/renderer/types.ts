@@ -19,6 +19,9 @@ export interface RenderState {
   /** All arrays and their independent range stacks; removed entries are history. */
   workspace: WorkspaceState;
 
+  /** Length of the main-array prefix colored complete by the frontend sweep. */
+  completedCount: number;
+
   /** Fixed minimum value for consistent scaling during a run */
   minValue: number;
 

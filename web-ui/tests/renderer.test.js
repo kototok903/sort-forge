@@ -106,6 +106,7 @@ test("renderer targets highlights and ranges per array, skips nulls, and sorts o
     workspace.arrays.get(1).rangeStack.push({ lo: 0, hi: 1 });
     const state = {
       workspace,
+      completedCount: 0,
       minValue: 0,
       maxValue: 1,
       highlights: [
@@ -135,6 +136,24 @@ test("renderer targets highlights and ranges per array, skips nulls, and sorts o
     workspace.isSorted = true;
     workspace.arrays.get(1).rangeStack = [];
     state.highlights = [];
+    // Algorithm completion alone does not color the main array.
+    renderer.render(state);
+    expect(
+      draws.filter((draw) => draw.color === colors.sorted.fill)
+    ).toHaveLength(0);
+    draws.length = 0;
+    state.completedCount = 3;
+    renderer.render(state);
+    expect(
+      draws
+        .filter((draw) => draw.color === colors.sorted.fill)
+        .map(({ x }) => x)
+    ).toEqual([7, 17, 27]);
+    expect(
+      draws.filter((draw) => draw.color === colors.default.fill)
+    ).toHaveLength(8);
+    draws.length = 0;
+    state.completedCount = 10;
     renderer.render(state);
     expect(
       draws.filter((draw) => draw.color === colors.sorted.fill)
