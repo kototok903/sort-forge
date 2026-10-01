@@ -1,5 +1,5 @@
 import { readElement } from "@/workspace/reducer";
-import type { WorkspaceState } from "@/workspace/types";
+import type { EventDirection, WorkspaceState } from "@/workspace/types";
 import type { PlaybackEvent } from "@/types/playback";
 import type { SoundConfig, EnvelopeParams } from "@/sound/types";
 import { DEFAULT_SOUND_CONFIG } from "@/sound/types";
@@ -76,9 +76,13 @@ export class SoundEngine {
   }
 
   /**
-   * Play sound for a sort event.
+   * Play sound before applying an event in either direction.
    */
-  playEvent(event: PlaybackEvent, workspace: WorkspaceState): void {
+  playEvent(
+    event: PlaybackEvent,
+    workspace: WorkspaceState,
+    direction: EventDirection = "forward"
+  ): void {
     if (this.config.waveform === "none" || !this.audioCtx || !this.masterGain)
       return;
 
@@ -102,10 +106,11 @@ export class SoundEngine {
         break;
       }
       case "Overwrite":
-      case "Copy":
-        if (event.new_val === null) return;
-        this.playTone(event.new_val, envelope);
+      case "Copy": {
+        const value = direction === "forward" ? event.new_val : event.old_val;
+        if (value !== null) this.playTone(value, envelope);
         break;
+      }
     }
   }
 

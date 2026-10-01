@@ -189,6 +189,7 @@ export class AnimationController {
     const event = this.getPlaybackEventAt(targetStep);
     if (!event) return;
 
+    this.soundEngine.playEvent(event, this.workspace, "backward");
     if (event.type !== "CompleteElement") {
       applyWorkspaceEvent(this.workspace, event, "backward");
     }
@@ -422,6 +423,7 @@ export class AnimationController {
               break;
             }
 
+            this.soundEngine.playEvent(event, this.workspace, "backward");
             if (event.type !== "CompleteElement") {
               applyWorkspaceEvent(this.workspace, event, "backward");
             }
