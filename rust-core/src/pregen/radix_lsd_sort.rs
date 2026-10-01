@@ -4,8 +4,8 @@
 //! Uses counting sort as a stable subroutine for each digit.
 //! Only works with non-negative integers.
 
-use crate::events::{ElementRef, SortEvent};
-use super::PregenSort;
+use super::{recorded_buffer::RecordedBuffer, PregenSort};
+use crate::events::{SortEvent, MAIN_ARRAY_ID};
 
 pub struct RadixLsdSort;
 
@@ -23,28 +23,44 @@ impl PregenSort for RadixLsdSort {
 
         // Find maximum value to determine number of digits
         let max_val = *array.iter().max().unwrap();
-        if max_val < 0 {
+        if array.iter().any(|&value| value < 0) || max_val == 0 {
             // Radix sort LSD only works with non-negative integers
             events.push(SortEvent::Done);
             return events;
         }
 
+        let mut output = RecordedBuffer::new(1, n, &mut events);
+
         // Process each digit position
         let mut exp = 1;
         while max_val / exp > 0 {
-            counting_sort_by_digit(array, exp, &mut events);
+            counting_sort_by_digit(array, exp, &mut output, &mut events);
+            if max_val / exp < RADIX {
+                break;
+            }
             exp *= RADIX;
         }
 
+        output.remove(&mut events);
         events.push(SortEvent::Done);
         events
     }
 }
 
 /// Counting sort based on digit at position exp (1, 10, 100, ...)
-fn counting_sort_by_digit(array: &mut [i32], exp: i32, events: &mut Vec<SortEvent>) {
+fn counting_sort_by_digit(
+    array: &mut [i32],
+    exp: i32,
+    output: &mut RecordedBuffer,
+    events: &mut Vec<SortEvent>,
+) {
     let n = array.len();
-    let mut output = vec![0; n];
+    events.push(SortEvent::EnterRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo: 0,
+        hi: n - 1,
+    });
+    output.enter_range(n, events);
     let mut count = vec![0usize; RADIX as usize];
 
     // Count occurrences of each digit
@@ -64,30 +80,40 @@ fn counting_sort_by_digit(array: &mut [i32], exp: i32, events: &mut Vec<SortEven
         let digit = ((val / exp) % RADIX) as usize;
         count[digit] -= 1;
         let new_pos = count[digit];
-        output[new_pos] = val;
+        output.copy_from(array, i, new_pos, events);
     }
 
-    // Copy output back to array with Overwrite events
-    for i in 0..n {
-        if array[i] != output[i] {
-            // Emit compare to show which element we're looking at
-            events.push(SortEvent::Compare {
-                i: ElementRef::main(i),
-                j: ElementRef::main(i),
-            });
-            events.push(SortEvent::Overwrite {
-                dest: ElementRef::main(i),
-                old_val: Some(array[i]),
-                new_val: Some(output[i]),
-            });
-            array[i] = output[i];
-        }
+    for idx in 0..n {
+        output.copy_to(array, idx, idx, events);
     }
+    output.exit_range(n, events);
+    events.push(SortEvent::ExitRange {
+        arr_id: MAIN_ARRAY_ID,
+        lo: 0,
+        hi: n - 1,
+    });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn maximum_digit_exponent_does_not_overflow() {
+        let mut array = [i32::MAX, 0, 10, i32::MAX - 1, 10];
+        let events = RadixLsdSort::sort(&mut array);
+        assert_eq!(array, [0, 10, 10, i32::MAX - 1, i32::MAX]);
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| matches!(event, SortEvent::AddArray { .. }))
+                .count(),
+            1
+        );
+        for mut input in [vec![0, 0], vec![-1, 2], vec![], vec![0]] {
+            assert_eq!(RadixLsdSort::sort(&mut input), vec![SortEvent::Done]);
+        }
+    }
 
     #[test]
     fn test_radix_sort_lsd_basic() {
@@ -153,12 +179,15 @@ mod tests {
     }
 
     #[test]
-    fn test_radix_sort_lsd_uses_overwrites() {
+    fn test_radix_sort_lsd_uses_copies() {
         let mut array = vec![30, 20, 10];
         let events = RadixLsdSort::sort(&mut array);
 
-        // Radix sort uses Overwrite events
-        let overwrite_count = events.iter().filter(|e| matches!(e, SortEvent::Overwrite { .. })).count();
-        assert!(overwrite_count > 0);
+        // Each transfer identifies its source
+        let copy_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Copy { .. }))
+            .count();
+        assert!(copy_count > 0);
     }
 }

@@ -3,8 +3,8 @@
 //! Uses binary search to find the insertion position, reducing comparisons
 //! from O(n) to O(log n) per element, though shifts remain O(n).
 
+use super::{saved_value::SavedValue, PregenSort};
 use crate::events::{ElementRef, SortEvent};
-use super::PregenSort;
 
 pub struct BinaryInsertionSort;
 
@@ -18,15 +18,19 @@ impl PregenSort for BinaryInsertionSort {
             return events;
         }
 
+        let mut saved = SavedValue::new(1, &mut events);
+
         for i in 1..n {
-            let value = array[i];
+            let value = saved.save_from(array, i, &mut events);
 
             // Binary search for insertion position in sorted portion [0, i)
-            let insert_pos = binary_search_insert_pos(array, i, value, &mut events);
+            let insert_pos =
+                binary_search_insert_pos(array, i, value, saved.reference(), &mut events);
 
-            // Shift elements right to make room (via overwrites)
+            // Shift elements right to make room
             for j in (insert_pos..i).rev() {
-                events.push(SortEvent::Overwrite {
+                events.push(SortEvent::Copy {
+                    src: ElementRef::main(j),
                     dest: ElementRef::main(j + 1),
                     old_val: Some(array[j + 1]),
                     new_val: Some(array[j]),
@@ -36,15 +40,11 @@ impl PregenSort for BinaryInsertionSort {
 
             // Insert value at final position (only if it moved)
             if insert_pos != i {
-                events.push(SortEvent::Overwrite {
-                    dest: ElementRef::main(insert_pos),
-                    old_val: Some(array[insert_pos]),
-                    new_val: Some(value),
-                });
-                array[insert_pos] = value;
+                saved.write_to(array, insert_pos, &mut events);
             }
         }
 
+        saved.remove(&mut events);
         events.push(SortEvent::Done);
         events
     }
@@ -56,6 +56,7 @@ fn binary_search_insert_pos(
     array: &[i32],
     right: usize,
     value: i32,
+    saved: ElementRef,
     events: &mut Vec<SortEvent>,
 ) -> usize {
     let mut lo = 0;
@@ -64,10 +65,10 @@ fn binary_search_insert_pos(
     while lo < hi {
         let mid = lo + (hi - lo) / 2;
 
-        // Compare with the element being inserted (at index `right`)
+        // Compare with the saved value being inserted
         events.push(SortEvent::Compare {
             i: ElementRef::main(mid),
-            j: ElementRef::main(right),
+            j: saved,
         });
 
         if array[mid] <= value {
@@ -99,9 +100,12 @@ mod tests {
         let events = BinaryInsertionSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
-        // No overwrites needed for already sorted array
-        let overwrite_count = events.iter().filter(|e| matches!(e, SortEvent::Overwrite { .. })).count();
-        assert_eq!(overwrite_count, 0);
+        // Sorted input saves values but does not write into main
+        let copy_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Copy { dest, .. } if dest.arr_id == 0))
+            .count();
+        assert_eq!(copy_count, 0);
     }
 
     #[test]
@@ -131,15 +135,21 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_insertion_sort_uses_overwrites() {
+    fn test_binary_insertion_sort_uses_copies() {
         let mut array = vec![3, 1, 2];
         let events = BinaryInsertionSort::sort(&mut array);
 
-        // Should use Overwrite events, not Swap
-        let swap_count = events.iter().filter(|e| matches!(e, SortEvent::Swap { .. })).count();
-        let overwrite_count = events.iter().filter(|e| matches!(e, SortEvent::Overwrite { .. })).count();
+        // Transfers use Copy events, not Swap
+        let swap_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Swap { .. }))
+            .count();
+        let copy_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Copy { dest, .. } if dest.arr_id == 0))
+            .count();
         assert_eq!(swap_count, 0);
-        assert!(overwrite_count > 0);
+        assert!(copy_count > 0);
     }
 
     #[test]
@@ -154,9 +164,18 @@ mod tests {
         let events1 = BinaryInsertionSort::sort(&mut array1);
         let events2 = InsertionSort::sort(&mut array2);
 
-        let cmp1 = events1.iter().filter(|e| matches!(e, SortEvent::Compare { .. })).count();
-        let cmp2 = events2.iter().filter(|e| matches!(e, SortEvent::Compare { .. })).count();
+        let cmp1 = events1
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Compare { .. }))
+            .count();
+        let cmp2 = events2
+            .iter()
+            .filter(|e| matches!(e, SortEvent::Compare { .. }))
+            .count();
 
-        assert!(cmp1 < cmp2, "Binary insertion sort should have fewer comparisons");
+        assert!(
+            cmp1 < cmp2,
+            "Binary insertion sort should have fewer comparisons"
+        );
     }
 }

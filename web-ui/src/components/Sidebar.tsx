@@ -242,6 +242,7 @@ export function Sidebar({
 }
 
 const SPECIAL_ALGORITHM_NAMES: Record<string, string> = {
+  merge_half_buffer: "Merge Sort (Half Buffer)",
   quicksort_ll: "Quicksort (LL)",
   quicksort_lr: "Quicksort (LR)",
   introsort: "Introsort",

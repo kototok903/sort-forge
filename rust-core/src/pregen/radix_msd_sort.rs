@@ -3,8 +3,8 @@
 //! Processes digits from most significant to least significant.
 //! Recursively sorts each bucket. Only works with non-negative integers.
 
-use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
-use super::PregenSort;
+use super::{recorded_buffer::RecordedBuffer, PregenSort};
+use crate::events::{SortEvent, MAIN_ARRAY_ID};
 
 pub struct RadixMsdSort;
 
@@ -22,7 +22,7 @@ impl PregenSort for RadixMsdSort {
 
         // Find maximum value to determine number of digits
         let max_val = *array.iter().max().unwrap();
-        if max_val < 0 {
+        if array.iter().any(|&value| value < 0) || max_val == 0 {
             // Radix sort MSD only works with non-negative integers
             events.push(SortEvent::Done);
             return events;
@@ -35,7 +35,9 @@ impl PregenSort for RadixMsdSort {
         }
 
         // Start recursive MSD sort
-        msd_sort(array, 0, n, max_exp, &mut events);
+        let mut temp = RecordedBuffer::new(1, n, &mut events);
+        msd_sort(array, 0, n, max_exp, &mut temp, &mut events);
+        temp.remove(&mut events);
 
         events.push(SortEvent::Done);
         events
@@ -43,7 +45,14 @@ impl PregenSort for RadixMsdSort {
 }
 
 /// Recursively sort array[lo..hi] by digit at position exp
-fn msd_sort(array: &mut [i32], lo: usize, hi: usize, exp: i32, events: &mut Vec<SortEvent>) {
+fn msd_sort(
+    array: &mut [i32],
+    lo: usize,
+    hi: usize,
+    exp: i32,
+    temp: &mut RecordedBuffer,
+    events: &mut Vec<SortEvent>,
+) {
     if hi <= lo + 1 || exp == 0 {
         return;
     }
@@ -68,35 +77,18 @@ fn msd_sort(array: &mut [i32], lo: usize, hi: usize, exp: i32, events: &mut Vec<
     }
 
     // Store original positions for stable distribution
-    let mut temp = vec![0; hi - lo];
+    temp.enter_range(hi - lo, events);
+    let boundaries = count.clone();
     for i in lo..hi {
         let digit = ((array[i] / exp) % RADIX as i32) as usize;
-        temp[count[digit]] = array[i];
+        temp.copy_from(array, i, count[digit], events);
         count[digit] += 1;
     }
 
-    // Copy back with Overwrite events
-    // Reset count for tracking bucket boundaries
-    let mut bucket_ends = vec![0usize; RADIX + 1];
-    for i in 0..RADIX {
-        bucket_ends[i + 1] = count[i];
+    for idx in 0..(hi - lo) {
+        temp.copy_to(array, idx, lo + idx, events);
     }
-
-    for i in 0..(hi - lo) {
-        let idx = lo + i;
-        if array[idx] != temp[i] {
-            events.push(SortEvent::Compare {
-                i: ElementRef::main(idx),
-                j: ElementRef::main(idx),
-            });
-            events.push(SortEvent::Overwrite {
-                dest: ElementRef::main(idx),
-                old_val: Some(array[idx]),
-                new_val: Some(temp[i]),
-            });
-            array[idx] = temp[i];
-        }
-    }
+    temp.exit_range(hi - lo, events);
 
     // Exit range
     events.push(SortEvent::ExitRange {
@@ -109,21 +101,11 @@ fn msd_sort(array: &mut [i32], lo: usize, hi: usize, exp: i32, events: &mut Vec<
     if exp / RADIX as i32 > 0 {
         let next_exp = exp / RADIX as i32;
 
-        // Recalculate bucket boundaries from scratch
-        let mut count = vec![0usize; RADIX + 1];
-        for i in lo..hi {
-            let digit = ((array[i] / exp) % RADIX as i32) as usize;
-            count[digit + 1] += 1;
-        }
-        for i in 0..RADIX {
-            count[i + 1] += count[i];
-        }
-
         for d in 0..RADIX {
-            let bucket_lo = lo + count[d];
-            let bucket_hi = lo + count[d + 1];
+            let bucket_lo = lo + boundaries[d];
+            let bucket_hi = lo + boundaries[d + 1];
             if bucket_hi > bucket_lo + 1 {
-                msd_sort(array, bucket_lo, bucket_hi, next_exp, events);
+                msd_sort(array, bucket_lo, bucket_hi, next_exp, temp, events);
             }
         }
     }
@@ -132,6 +114,23 @@ fn msd_sort(array: &mut [i32], lo: usize, hi: usize, exp: i32, events: &mut Vec<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scratch_reuse_handles_shared_prefixes_and_maximum_values() {
+        let mut array = [i32::MAX, 0, 101, 109, 101, i32::MAX - 1];
+        let events = RadixMsdSort::sort(&mut array);
+        assert_eq!(array, [0, 101, 101, 109, i32::MAX - 1, i32::MAX]);
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| matches!(event, SortEvent::AddArray { .. }))
+                .count(),
+            1
+        );
+        for mut input in [vec![0, 0], vec![-1, 2], vec![], vec![0]] {
+            assert_eq!(RadixMsdSort::sort(&mut input), vec![SortEvent::Done]);
+        }
+    }
 
     #[test]
     fn test_radix_sort_msd_basic() {
@@ -201,8 +200,14 @@ mod tests {
         let mut array = vec![321, 123, 213, 312, 132, 231];
         let events = RadixMsdSort::sort(&mut array);
 
-        let enter_count = events.iter().filter(|e| matches!(e, SortEvent::EnterRange { .. })).count();
-        let exit_count = events.iter().filter(|e| matches!(e, SortEvent::ExitRange { .. })).count();
+        let enter_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::EnterRange { .. }))
+            .count();
+        let exit_count = events
+            .iter()
+            .filter(|e| matches!(e, SortEvent::ExitRange { .. }))
+            .count();
 
         assert!(enter_count > 0);
         assert_eq!(enter_count, exit_count);

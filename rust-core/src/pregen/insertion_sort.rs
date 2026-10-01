@@ -1,6 +1,6 @@
 //! Insertion Sort implementation for V1 (Pregeneration) engine.
 
-use super::PregenSort;
+use super::{saved_value::SavedValue, PregenSort};
 use crate::events::{ElementRef, SortEvent};
 
 pub struct InsertionSort;
@@ -15,20 +15,23 @@ impl PregenSort for InsertionSort {
             return events;
         }
 
+        let mut saved = SavedValue::new(1, &mut events);
+
         for i in 1..n {
-            let value = array[i];
+            let value = saved.save_from(array, i, &mut events);
             let mut j = i;
 
             // Find insertion position and shift elements right
             while j > 0 {
                 events.push(SortEvent::Compare {
                     i: ElementRef::main(j - 1),
-                    j: ElementRef::main(j),
+                    j: saved.reference(),
                 });
 
                 if array[j - 1] > value {
                     // Shift element right
-                    events.push(SortEvent::Overwrite {
+                    events.push(SortEvent::Copy {
+                        src: ElementRef::main(j - 1),
                         dest: ElementRef::main(j),
                         old_val: Some(array[j]),
                         new_val: Some(array[j - 1]),
@@ -42,15 +45,11 @@ impl PregenSort for InsertionSort {
 
             // Insert value at final position (only if it moved)
             if j != i {
-                events.push(SortEvent::Overwrite {
-                    dest: ElementRef::main(j),
-                    old_val: Some(array[j]),
-                    new_val: Some(value),
-                });
-                array[j] = value;
+                saved.write_to(array, j, &mut events);
             }
         }
 
+        saved.remove(&mut events);
         events.push(SortEvent::Done);
         events
     }
@@ -75,12 +74,12 @@ mod tests {
         let events = InsertionSort::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
-        // No overwrites needed for already sorted array
-        let overwrite_count = events
+        // Sorted input saves values but does not write into main
+        let copy_count = events
             .iter()
-            .filter(|e| matches!(e, SortEvent::Overwrite { .. }))
+            .filter(|e| matches!(e, SortEvent::Copy { dest, .. } if dest.arr_id == 0))
             .count();
-        assert_eq!(overwrite_count, 0);
+        assert_eq!(copy_count, 0);
     }
 
     #[test]
@@ -110,20 +109,20 @@ mod tests {
     }
 
     #[test]
-    fn test_insertion_sort_uses_overwrites() {
+    fn test_insertion_sort_uses_copies() {
         let mut array = vec![3, 1, 2];
         let events = InsertionSort::sort(&mut array);
 
-        // Should use Overwrite events, not Swap
+        // Transfers use Copy events, not Swap
         let swap_count = events
             .iter()
             .filter(|e| matches!(e, SortEvent::Swap { .. }))
             .count();
-        let overwrite_count = events
+        let copy_count = events
             .iter()
-            .filter(|e| matches!(e, SortEvent::Overwrite { .. }))
+            .filter(|e| matches!(e, SortEvent::Copy { dest, .. } if dest.arr_id == 0))
             .count();
         assert_eq!(swap_count, 0);
-        assert!(overwrite_count > 0);
+        assert!(copy_count > 0);
     }
 }

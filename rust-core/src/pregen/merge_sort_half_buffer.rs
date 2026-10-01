@@ -1,4 +1,4 @@
-//! Merge Sort implementation for V1 (Pregeneration) engine.
+//! Merge Sort (Half Buffer) implementation for V1 (Pregeneration) engine.
 //!
 //! Classic divide-and-conquer algorithm with O(n log n) time complexity.
 //! Uses EnterRange/ExitRange events to visualize the recursive structure.
@@ -15,9 +15,9 @@ fn auxiliary(idx: usize) -> ElementRef {
     }
 }
 
-pub struct MergeSort;
+pub struct MergeSortHalfBuffer;
 
-impl PregenSort for MergeSort {
+impl PregenSort for MergeSortHalfBuffer {
     fn sort(array: &mut [i32]) -> Vec<SortEvent> {
         let mut events = Vec::new();
         let n = array.len();
@@ -27,11 +27,12 @@ impl PregenSort for MergeSort {
             return events;
         }
 
-        // Reserve once; recursive merges initialize the prefix before any reads.
-        let mut aux = Vec::with_capacity(n);
+        // Reserve once. Slots are initialized only when a left half is copied.
+        let capacity = n.div_ceil(2);
+        let mut aux = Vec::with_capacity(capacity);
         events.push(SortEvent::AddArray {
             arr_id: AUX_ARRAY_ID,
-            length: n,
+            length: capacity,
         });
         merge_sort_recursive(array, &mut aux, 0, n - 1, &mut events);
 
@@ -86,66 +87,65 @@ fn merge(
     hi: usize,
     events: &mut Vec<SortEvent>,
 ) {
+    let left_len = mid - lo + 1;
     events.push(SortEvent::EnterRange {
         arr_id: AUX_ARRAY_ID,
-        lo,
-        hi,
+        lo: 0,
+        hi: left_len - 1,
     });
-    for idx in lo..=hi {
+    for idx in 0..left_len {
+        let value = array[lo + idx];
         events.push(SortEvent::Copy {
-            src: ElementRef::main(idx),
+            src: ElementRef::main(lo + idx),
             dest: auxiliary(idx),
             old_val: aux.get(idx).copied(),
-            new_val: Some(array[idx]),
+            new_val: Some(value),
         });
         if idx < aux.len() {
-            aux[idx] = array[idx];
+            aux[idx] = value;
         } else {
-            // Left-to-right recursion initializes new positions consecutively.
-            assert_eq!(idx, aux.len());
-            aux.push(array[idx]);
+            aux.push(value);
         }
     }
 
-    let mut i = lo;
+    let mut i = 0;
     let mut j = mid + 1;
-    for k in lo..=hi {
-        let src = if i > mid {
-            let idx = j;
-            j += 1;
-            idx
-        } else if j > hi {
-            let idx = i;
-            i += 1;
-            idx
-        } else {
+    let mut k = lo;
+    while i < left_len {
+        if j <= hi {
             events.push(SortEvent::Compare {
                 i: auxiliary(i),
-                j: auxiliary(j),
+                j: ElementRef::main(j),
             });
-            if aux[i] <= aux[j] {
-                let idx = i;
-                i += 1;
-                idx
-            } else {
-                let idx = j;
-                j += 1;
-                idx
-            }
+        }
+        let (src, value) = if j > hi || aux[i] <= array[j] {
+            let src = auxiliary(i);
+            let value = aux[i];
+            i += 1;
+            (src, value)
+        } else {
+            // With left values remaining, writes cannot overtake unread right values.
+            debug_assert!(k < j);
+            let src = ElementRef::main(j);
+            let value = array[j];
+            j += 1;
+            (src, value)
         };
-        // Equal-value transfers are still real writes.
+        // Equal-value transfers are still real writes. Ties choose left for stability.
         events.push(SortEvent::Copy {
-            src: auxiliary(src),
+            src,
             dest: ElementRef::main(k),
             old_val: Some(array[k]),
-            new_val: Some(aux[src]),
+            new_val: Some(value),
         });
-        array[k] = aux[src];
+        array[k] = value;
+        k += 1;
     }
+    // Once left is exhausted, the right tail is already in its final position.
     events.push(SortEvent::ExitRange {
         arr_id: AUX_ARRAY_ID,
-        lo,
-        hi,
+        lo: 0,
+        hi: left_len - 1,
     });
 }
 
@@ -154,31 +154,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn full_buffer_is_initialized_by_merges_without_a_startup_clone() {
-        for n in 2usize..=129 {
+    fn half_buffer_handles_uneven_lengths_and_duplicate_values() {
+        for n in 2usize..=65 {
             let mut array: Vec<i32> = (0..n)
-                .map(|idx| ((idx * 17 + n) % 23) as i32 - 11)
+                .map(|idx| ((idx * 17 + n * 3) % 11) as i32 - 5)
                 .collect();
             let mut expected = array.clone();
             expected.sort();
-            let events = MergeSort::sort(&mut array);
+            let events = MergeSortHalfBuffer::sort(&mut array);
             assert_eq!(array, expected);
-            assert!(
-                matches!(events[1], SortEvent::EnterRange { arr_id: MAIN_ARRAY_ID, lo: 0, hi } if hi == n - 1)
+            assert_eq!(
+                events.first(),
+                Some(&SortEvent::AddArray {
+                    arr_id: AUX_ARRAY_ID,
+                    length: n.div_ceil(2)
+                })
             );
-            assert_eq!(events.iter().filter(|event| matches!(event, SortEvent::Copy { dest, old_val: None, .. } if dest.arr_id == AUX_ARRAY_ID)).count(), n);
+            for event in events {
+                if let SortEvent::Copy { src, dest, .. } = event {
+                    for reference in [src, dest] {
+                        if reference.arr_id == AUX_ARRAY_ID {
+                            assert!(reference.idx < n.div_ceil(2));
+                        }
+                    }
+                }
+            }
         }
     }
 
     #[test]
     fn buffer_lifetime_and_equal_value_copies_are_recorded() {
         let mut array = [1, 1];
-        let events = MergeSort::sort(&mut array);
+        let events = MergeSortHalfBuffer::sort(&mut array);
         assert_eq!(
             events.first(),
             Some(&SortEvent::AddArray {
                 arr_id: AUX_ARRAY_ID,
-                length: 2
+                length: 1
             })
         );
         assert_eq!(
@@ -192,7 +204,7 @@ mod tests {
                 .iter()
                 .filter(|e| matches!(e, SortEvent::Copy { .. }))
                 .count(),
-            4
+            2
         );
         assert_eq!(
             events
@@ -206,21 +218,24 @@ mod tests {
                     }
                 ))
                 .count(),
-            2
+            1
         );
-        assert!(events.iter().any(|e| matches!(e, SortEvent::Compare { i, j } if i.arr_id == AUX_ARRAY_ID && j.arr_id == AUX_ARRAY_ID)));
+        assert!(events.iter().any(|e| matches!(e, SortEvent::Compare { i, j } if i.arr_id == AUX_ARRAY_ID && j.arr_id == MAIN_ARRAY_ID)));
         assert!(!events
             .iter()
             .any(|e| matches!(e, SortEvent::Overwrite { .. })));
         for input in [vec![], vec![1]] {
-            assert_eq!(MergeSort::sort(&mut input.clone()), vec![SortEvent::Done]);
+            assert_eq!(
+                MergeSortHalfBuffer::sort(&mut input.clone()),
+                vec![SortEvent::Done]
+            );
         }
     }
 
     #[test]
     fn test_merge_sort_basic() {
         let mut array = vec![5, 3, 8, 4, 2];
-        let events = MergeSort::sort(&mut array);
+        let events = MergeSortHalfBuffer::sort(&mut array);
 
         assert_eq!(array, vec![2, 3, 4, 5, 8]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));
@@ -229,7 +244,7 @@ mod tests {
     #[test]
     fn test_merge_sort_already_sorted() {
         let mut array = vec![1, 2, 3, 4, 5];
-        MergeSort::sort(&mut array);
+        MergeSortHalfBuffer::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -237,7 +252,7 @@ mod tests {
     #[test]
     fn test_merge_sort_reverse() {
         let mut array = vec![5, 4, 3, 2, 1];
-        MergeSort::sort(&mut array);
+        MergeSortHalfBuffer::sort(&mut array);
 
         assert_eq!(array, vec![1, 2, 3, 4, 5]);
     }
@@ -245,7 +260,7 @@ mod tests {
     #[test]
     fn test_merge_sort_empty() {
         let mut array: Vec<i32> = vec![];
-        let events = MergeSort::sort(&mut array);
+        let events = MergeSortHalfBuffer::sort(&mut array);
 
         assert!(array.is_empty());
         assert!(matches!(events.last(), Some(SortEvent::Done)));
@@ -254,7 +269,7 @@ mod tests {
     #[test]
     fn test_merge_sort_single() {
         let mut array = vec![42];
-        let events = MergeSort::sort(&mut array);
+        let events = MergeSortHalfBuffer::sort(&mut array);
 
         assert_eq!(array, vec![42]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));
@@ -263,7 +278,7 @@ mod tests {
     #[test]
     fn test_merge_sort_emits_range_events() {
         let mut array = vec![3, 1, 4, 1, 5];
-        let events = MergeSort::sort(&mut array);
+        let events = MergeSortHalfBuffer::sort(&mut array);
 
         let enter_count = events
             .iter()
@@ -281,7 +296,7 @@ mod tests {
     #[test]
     fn test_merge_sort_duplicates() {
         let mut array = vec![3, 1, 3, 2, 1];
-        let events = MergeSort::sort(&mut array);
+        let events = MergeSortHalfBuffer::sort(&mut array);
 
         assert_eq!(array, vec![1, 1, 2, 3, 3]);
         assert!(matches!(events.last(), Some(SortEvent::Done)));

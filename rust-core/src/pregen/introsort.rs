@@ -4,7 +4,7 @@
 //! heapsort when the recursion depth exceeds a level based on log(n).
 //! Falls back to insertion sort for small subarrays. Used in C++ STL.
 
-use super::PregenSort;
+use super::{saved_value::SavedValue, PregenSort};
 use crate::events::{ElementRef, SortEvent, MAIN_ARRAY_ID};
 
 pub struct Introsort;
@@ -25,7 +25,12 @@ impl PregenSort for Introsort {
         // Maximum depth before switching to heapsort: 2 * floor(log2(n))
         let max_depth = 2 * (n as f64).log2().floor() as usize;
 
-        introsort_recursive(array, 0, n - 1, max_depth, &mut events);
+        // Initialize lazily at the first insertion range and reuse across ranges.
+        let mut saved: Option<SavedValue> = None;
+        introsort_recursive(array, 0, n - 1, max_depth, &mut saved, &mut events);
+        if let Some(saved) = saved {
+            saved.remove(&mut events);
+        }
 
         events.push(SortEvent::Done);
         events
@@ -37,13 +42,17 @@ fn introsort_recursive(
     lo: usize,
     hi: usize,
     depth_limit: usize,
+    saved: &mut Option<SavedValue>,
     events: &mut Vec<SortEvent>,
 ) {
     let size = hi - lo + 1;
 
     // Use insertion sort for small subarrays
     if size <= INSERTION_THRESHOLD {
-        insertion_sort_range(array, lo, hi, events);
+        if size > 1 {
+            let saved = saved.get_or_insert_with(|| SavedValue::new(1, events));
+            insertion_sort_range(array, lo, hi, saved, events);
+        }
         return;
     }
 
@@ -70,10 +79,10 @@ fn introsort_recursive(
 
     // Recurse on subarrays
     if pivot_idx > lo {
-        introsort_recursive(array, lo, pivot_idx - 1, depth_limit - 1, events);
+        introsort_recursive(array, lo, pivot_idx - 1, depth_limit - 1, saved, events);
     }
     if pivot_idx < hi {
-        introsort_recursive(array, pivot_idx + 1, hi, depth_limit - 1, events);
+        introsort_recursive(array, pivot_idx + 1, hi, depth_limit - 1, saved, events);
     }
 }
 
@@ -183,19 +192,26 @@ fn partition(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent
 }
 
 /// Insertion sort for a range.
-fn insertion_sort_range(array: &mut [i32], lo: usize, hi: usize, events: &mut Vec<SortEvent>) {
+fn insertion_sort_range(
+    array: &mut [i32],
+    lo: usize,
+    hi: usize,
+    saved: &mut SavedValue,
+    events: &mut Vec<SortEvent>,
+) {
     for i in (lo + 1)..=hi {
-        let value = array[i];
+        let value = saved.save_from(array, i, events);
         let mut j = i;
 
         while j > lo {
             events.push(SortEvent::Compare {
                 i: ElementRef::main(j - 1),
-                j: ElementRef::main(j),
+                j: saved.reference(),
             });
 
             if array[j - 1] > value {
-                events.push(SortEvent::Overwrite {
+                events.push(SortEvent::Copy {
+                    src: ElementRef::main(j - 1),
                     dest: ElementRef::main(j),
                     old_val: Some(array[j]),
                     new_val: Some(array[j - 1]),
@@ -208,12 +224,7 @@ fn insertion_sort_range(array: &mut [i32], lo: usize, hi: usize, events: &mut Ve
         }
 
         if j != i {
-            events.push(SortEvent::Overwrite {
-                dest: ElementRef::main(j),
-                old_val: Some(array[j]),
-                new_val: Some(value),
-            });
-            array[j] = value;
+            saved.write_to(array, j, events);
         }
     }
 }
@@ -283,6 +294,19 @@ fn sift_down(array: &mut [i32], base: usize, root: usize, end: usize, events: &m
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn heapsort_fallback_does_not_allocate_insertion_storage() {
+        let mut array: Vec<i32> = (0..32).rev().collect();
+        let mut events = Vec::new();
+        let mut saved = None;
+        introsort_recursive(&mut array, 0, 31, 0, &mut saved, &mut events);
+        assert_eq!(array, (0..32).collect::<Vec<_>>());
+        assert!(saved.is_none());
+        assert!(!events
+            .iter()
+            .any(|event| matches!(event, SortEvent::AddArray { .. })));
+    }
 
     #[test]
     fn test_introsort_basic() {

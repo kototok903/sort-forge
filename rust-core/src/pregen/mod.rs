@@ -4,6 +4,9 @@
 //! and collect all events into a vector. Optimized for simplicity and
 //! timeline scrubbing, but uses O(N²) memory for events.
 
+mod recorded_buffer;
+mod saved_value;
+
 pub mod binary_insertion_sort;
 pub mod bitonic_sort;
 pub mod bubble_sort;
@@ -15,6 +18,7 @@ pub mod heap_sort;
 pub mod insertion_sort;
 pub mod introsort;
 pub mod merge_sort;
+pub mod merge_sort_half_buffer;
 pub mod odd_even_sort;
 pub mod pancake_sort;
 pub mod quicksort_ll;
@@ -52,6 +56,7 @@ pub enum Algorithm {
     QuickSortLL,
     QuickSortLR,
     MergeSort,
+    MergeSortHalfBuffer,
     HeapSort,
     Timsort,
     IntroSort,
@@ -77,6 +82,7 @@ impl Algorithm {
             Algorithm::QuickSortLL => "quicksort_ll",
             Algorithm::QuickSortLR => "quicksort_lr",
             Algorithm::MergeSort => "merge",
+            Algorithm::MergeSortHalfBuffer => "merge_half_buffer",
             Algorithm::HeapSort => "heap",
             Algorithm::Timsort => "timsort",
             Algorithm::IntroSort => "introsort",
@@ -87,7 +93,7 @@ impl Algorithm {
     }
 
     pub fn all() -> &'static [Algorithm] {
-        const ALGORITHMS: [Algorithm; 20] = [
+        const ALGORITHMS: [Algorithm; 21] = [
             Algorithm::Bubble,
             Algorithm::Selection,
             Algorithm::Insertion,
@@ -102,6 +108,7 @@ impl Algorithm {
             Algorithm::QuickSortLL,
             Algorithm::QuickSortLR,
             Algorithm::MergeSort,
+            Algorithm::MergeSortHalfBuffer,
             Algorithm::HeapSort,
             Algorithm::Timsort,
             Algorithm::IntroSort,
@@ -131,6 +138,7 @@ impl Algorithm {
             "quicksort_ll" | "quicksortll" | "quick_sort_ll" => Some(Algorithm::QuickSortLL),
             "quicksort_lr" | "quicksortlr" | "quick_sort_lr" => Some(Algorithm::QuickSortLR),
             "merge" | "mergesort" | "merge_sort" => Some(Algorithm::MergeSort),
+            "merge_half_buffer" | "merge_sort_half_buffer" => Some(Algorithm::MergeSortHalfBuffer),
             "heap" | "heapsort" | "heap_sort" => Some(Algorithm::HeapSort),
             "tim" | "timsort" | "tim_sort" => Some(Algorithm::Timsort),
             "intro" | "introsort" | "intro_sort" => Some(Algorithm::IntroSort),
@@ -160,6 +168,7 @@ pub fn pregen_sort(algorithm: Algorithm, array: &mut [i32]) -> Vec<SortEvent> {
         Algorithm::QuickSortLL => quicksort_ll::QuickSortLL::sort(array),
         Algorithm::QuickSortLR => quicksort_lr::QuickSortLR::sort(array),
         Algorithm::MergeSort => merge_sort::MergeSort::sort(array),
+        Algorithm::MergeSortHalfBuffer => merge_sort_half_buffer::MergeSortHalfBuffer::sort(array),
         Algorithm::HeapSort => heap_sort::HeapSort::sort(array),
         Algorithm::Timsort => timsort::Timsort::sort(array),
         Algorithm::IntroSort => introsort::Introsort::sort(array),
