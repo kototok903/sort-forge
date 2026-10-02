@@ -1,4 +1,4 @@
-import type { Distribution, EngineType } from "@/config";
+import type { ValueMode, ArrayOrder, EngineType } from "@/config";
 import {
   PREGEN_ARRAY_SIZE_MIN,
   PREGEN_ARRAY_SIZE_MAX,
@@ -7,7 +7,10 @@ import {
   LIVE_ARRAY_SIZE_MAX,
   LIVE_ARRAY_SIZE_DEFAULT,
   ENGINE_DEFAULT,
-  DISTRIBUTION_DEFAULT,
+  VALUE_MODE_DEFAULT,
+  ARRAY_ORDER_DEFAULT,
+  VALUE_MODE_OPTIONS,
+  ARRAY_ORDER_OPTIONS,
 } from "@/config";
 import { DEFAULT_THEME_ID, isValidThemeId } from "@/themes/themes";
 import type { ThemeId } from "@/themes/types";
@@ -27,7 +30,8 @@ export interface Settings {
   liveAlgorithm: string;
   pregenArraySize: number;
   liveArraySize: number;
-  distribution: Distribution;
+  valueMode: ValueMode;
+  arrayOrder: ArrayOrder;
   themeId: ThemeId;
   sidebarOpen: boolean;
   soundWaveform: SoundWaveform;
@@ -51,7 +55,8 @@ export const DEFAULT_SETTINGS: Settings = {
   liveAlgorithm: "",
   pregenArraySize: PREGEN_ARRAY_SIZE_DEFAULT,
   liveArraySize: LIVE_ARRAY_SIZE_DEFAULT,
-  distribution: DISTRIBUTION_DEFAULT,
+  valueMode: VALUE_MODE_DEFAULT,
+  arrayOrder: ARRAY_ORDER_DEFAULT,
   themeId: DEFAULT_THEME_ID,
   sidebarOpen: true,
   soundWaveform: DEFAULT_SOUND_CONFIG.waveform,
@@ -116,9 +121,12 @@ export function validateSettings(
     );
   }
 
-  // Distribution
-  if (obj.distribution === "random" || obj.distribution === "uniform") {
-    settings.distribution = obj.distribution;
+  // Array generation settings. Legacy distribution settings are ignored.
+  if (VALUE_MODE_OPTIONS.some(({ value }) => value === obj.valueMode)) {
+    settings.valueMode = obj.valueMode as ValueMode;
+  }
+  if (ARRAY_ORDER_OPTIONS.some(({ value }) => value === obj.arrayOrder)) {
+    settings.arrayOrder = obj.arrayOrder as ArrayOrder;
   }
 
   // Theme ID - validate against available themes

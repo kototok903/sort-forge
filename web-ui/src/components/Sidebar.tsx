@@ -1,5 +1,7 @@
-import type { Distribution, EngineType } from "@/config";
+import type { ValueMode, ArrayOrder, EngineType } from "@/config";
 import {
+  VALUE_MODE_OPTIONS,
+  ARRAY_ORDER_OPTIONS,
   PREGEN_ARRAY_SIZE_MAX,
   PREGEN_ARRAY_SIZE_MIN,
   LIVE_ARRAY_SIZE_MIN,
@@ -50,14 +52,16 @@ interface SidebarProps {
   engineType: EngineType;
   algorithms: string[];
   selectedAlgorithm: string;
-  distribution: Distribution;
+  valueMode: ValueMode;
+  arrayOrder: ArrayOrder;
   arraySize: number;
   themeId: ThemeId;
   soundWaveform: SoundWaveform;
   soundVolume: number;
   onEngineTypeChange: (type: EngineType) => void;
   onAlgorithmChange: (algorithm: string) => void;
-  onDistributionChange: (distribution: Distribution) => void;
+  onValueModeChange: (valueMode: ValueMode) => void;
+  onArrayOrderChange: (arrayOrder: ArrayOrder) => void;
   onArraySizeChange: (size: number) => void;
   onThemeChange: (themeId: ThemeId) => void;
   onSoundWaveformChange: (waveform: SoundWaveform) => void;
@@ -70,14 +74,16 @@ export function Sidebar({
   engineType,
   algorithms,
   selectedAlgorithm,
-  distribution,
+  valueMode,
+  arrayOrder,
   arraySize,
   themeId,
   soundWaveform,
   soundVolume,
   onEngineTypeChange,
   onAlgorithmChange,
-  onDistributionChange,
+  onValueModeChange,
+  onArrayOrderChange,
   onArraySizeChange,
   onThemeChange,
   onSoundWaveformChange,
@@ -112,7 +118,8 @@ export function Sidebar({
       <SidebarContent id="sort-settings" className="gap-4 p-3">
         <SidebarGroup className="p-0">
           <FieldSet className="gap-3" disabled={disabled}>
-            <FieldLegend variant="label">Engine</FieldLegend>
+            <FieldLegend variant="legend">Engine</FieldLegend>
+            <Separator />
             <ToggleGroup
               aria-label="Engine"
               variant="outline"
@@ -134,24 +141,29 @@ export function Sidebar({
             </ToggleGroup>
           </FieldSet>
         </SidebarGroup>
-        <Separator />
         <SidebarGroup className="p-0">
           <FieldSet className="gap-3" disabled={disabled}>
-            <FieldLegend variant="label">Array</FieldLegend>
+            <FieldLegend variant="legend">Algorithm</FieldLegend>
+            <Separator />
+            <Field data-disabled={disabled}>
+              <SettingSelect
+                id="algorithm"
+                value={selectedAlgorithm}
+                items={algorithms.map((value) => ({
+                  value,
+                  label: formatAlgorithmName(value),
+                }))}
+                onValueChange={onAlgorithmChange}
+                disabled={disabled}
+              />
+            </Field>
+          </FieldSet>
+        </SidebarGroup>
+        <SidebarGroup className="p-0">
+          <FieldSet className="gap-3" disabled={disabled}>
+            <FieldLegend variant="legend">Array</FieldLegend>
+            <Separator />
             <FieldGroup className="gap-3">
-              <Field data-disabled={disabled}>
-                <FieldLabel htmlFor="algorithm">Algorithm</FieldLabel>
-                <SettingSelect
-                  id="algorithm"
-                  value={selectedAlgorithm}
-                  items={algorithms.map((value) => ({
-                    value,
-                    label: formatAlgorithmName(value),
-                  }))}
-                  onValueChange={onAlgorithmChange}
-                  disabled={disabled}
-                />
-              </Field>
               {isPregen ? (
                 <Field data-disabled={disabled}>
                   <div className="flex items-center justify-between gap-2">
@@ -182,46 +194,43 @@ export function Sidebar({
                 />
               )}
               <Field data-disabled={disabled}>
-                <FieldLabel id="distribution-label">Distribution</FieldLabel>
-                <ToggleGroup
-                  aria-labelledby="distribution-label"
-                  variant="outline"
-                  size="sm"
-                  spacing={0}
-                  value={[distribution]}
+                <FieldLabel htmlFor="value-mode">Values</FieldLabel>
+                <SettingSelect
+                  id="value-mode"
+                  value={valueMode}
+                  items={VALUE_MODE_OPTIONS}
+                  onValueChange={onValueModeChange}
                   disabled={disabled}
-                  onValueChange={(values) => {
-                    if (values[0])
-                      onDistributionChange(values[0] as Distribution);
-                  }}
-                  className="w-full"
-                >
-                  <ToggleGroupItem value="random" className="flex-1">
-                    Random
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="uniform" className="flex-1">
-                    Uniform
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                />
               </Field>
-              <ActionButton
-                label="Generate new array"
-                shortcut="G"
-                size="sm"
-                onClick={onGenerate}
-                disabled={disabled}
-                aria-label="Generate new array"
-                aria-busy={disabled}
-              >
-                {disabled && <Spinner data-icon="inline-start" />}
-                {disabled ? "Generating…" : "Generate"}
-              </ActionButton>
+              <Field data-disabled={disabled}>
+                <FieldLabel htmlFor="array-order">Order</FieldLabel>
+                <SettingSelect
+                  id="array-order"
+                  value={arrayOrder}
+                  items={ARRAY_ORDER_OPTIONS}
+                  onValueChange={onArrayOrderChange}
+                  disabled={disabled}
+                />
+              </Field>
             </FieldGroup>
           </FieldSet>
         </SidebarGroup>
+        <ActionButton
+          label="Generate new array"
+          shortcut="G"
+          size="sm"
+          onClick={onGenerate}
+          disabled={disabled}
+          aria-label="Generate new array"
+          aria-busy={disabled}
+        >
+          {disabled && <Spinner data-icon="inline-start" />}
+          {disabled ? "Generating…" : "Generate"}
+        </ActionButton>
         <SidebarGroup className="mt-auto p-0 pt-4">
           <FieldSet className="gap-3">
-            <FieldLegend variant="label">Customization</FieldLegend>
+            <FieldLegend variant="legend">Customization</FieldLegend>
             <Separator />
             <FieldGroup className="gap-3">
               <Field>
@@ -285,7 +294,7 @@ function SettingSelect<T extends string>({
 }: {
   id: string;
   value: T;
-  items: { value: T; label: string }[];
+  items: readonly { value: T; label: string }[];
   disabled?: boolean;
   onValueChange: (value: T) => void;
 }) {

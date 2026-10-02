@@ -19,12 +19,12 @@ import {
   getAvailableLiveAlgorithms,
 } from "@/engines/LiveEngine";
 import {
-  type Distribution,
+  type ValueMode,
+  type ArrayOrder,
   type EngineType,
-  RANDOM_VALUE_MAX,
-  RANDOM_VALUE_MIN,
   SPEED_DEFAULT,
 } from "@/config";
+import { generateArray } from "@/lib/array-generation";
 import { shouldHandlePlaybackShortcut } from "@/lib/shortcuts";
 import { usePointerFocus } from "@/hooks/use-pointer-focus";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -36,27 +36,6 @@ import { useSettings } from "@/settings/useSettings";
 import type { SoundWaveform } from "@/sound/types";
 import { createWorkspace } from "@/workspace/reducer";
 import { emptyOperationCounts } from "@/types/operation-counts";
-
-function generateArray(size: number, distribution: Distribution): number[] {
-  switch (distribution) {
-    case "uniform": {
-      const array = Array.from({ length: size }, (_, index) => index + 1);
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
-    }
-    case "random":
-    default: {
-      const range = RANDOM_VALUE_MAX - RANDOM_VALUE_MIN + 1;
-      return Array.from(
-        { length: size },
-        () => Math.floor(Math.random() * range) + RANDOM_VALUE_MIN
-      );
-    }
-  }
-}
 
 function App() {
   usePointerFocus();
@@ -137,7 +116,11 @@ function App() {
       !hasInitialized
     ) {
       setHasInitialized(true);
-      const array = generateArray(arraySize, settings.distribution);
+      const array = generateArray({
+        size: arraySize,
+        values: settings.valueMode,
+        order: settings.arrayOrder,
+      });
       const engine =
         engineType === "pregen" ? new PregenEngine() : new LiveEngine();
       controller.initialize(engine, selectedAlgorithm, array);
@@ -148,7 +131,8 @@ function App() {
     selectedAlgorithm,
     hasInitialized,
     arraySize,
-    settings.distribution,
+    settings.valueMode,
+    settings.arrayOrder,
     engineType,
     controller,
   ]);
@@ -205,11 +189,13 @@ function App() {
     [engineType, setSettings]
   );
 
-  // Handle distribution change
-  const handleDistributionChange = useCallback(
-    (distribution: Distribution) => {
-      setSettings({ distribution });
-    },
+  const handleValueModeChange = useCallback(
+    (valueMode: ValueMode) => setSettings({ valueMode }),
+    [setSettings]
+  );
+
+  const handleArrayOrderChange = useCallback(
+    (arrayOrder: ArrayOrder) => setSettings({ arrayOrder }),
     [setSettings]
   );
 
@@ -250,7 +236,11 @@ function App() {
     setIsGenerating(true);
     setGenerationError(null);
     try {
-      const array = generateArray(arraySize, settings.distribution);
+      const array = generateArray({
+        size: arraySize,
+        values: settings.valueMode,
+        order: settings.arrayOrder,
+      });
       const engine =
         engineType === "pregen" ? new PregenEngine() : new LiveEngine();
       await controller.initialize(engine, selectedAlgorithm, array);
@@ -267,7 +257,8 @@ function App() {
     arraySize,
     selectedAlgorithm,
     controller,
-    settings.distribution,
+    settings.valueMode,
+    settings.arrayOrder,
     engineType,
   ]);
 
@@ -413,14 +404,16 @@ function App() {
             engineType={engineType}
             algorithms={algorithms}
             selectedAlgorithm={selectedAlgorithm}
-            distribution={settings.distribution}
+            valueMode={settings.valueMode}
+            arrayOrder={settings.arrayOrder}
             arraySize={arraySize}
             themeId={settings.themeId}
             soundWaveform={settings.soundWaveform}
             soundVolume={settings.soundVolume}
             onEngineTypeChange={handleEngineTypeChange}
             onAlgorithmChange={handleAlgorithmChange}
-            onDistributionChange={handleDistributionChange}
+            onValueModeChange={handleValueModeChange}
+            onArrayOrderChange={handleArrayOrderChange}
             onArraySizeChange={handleArraySizeChange}
             onThemeChange={handleThemeChange}
             onSoundWaveformChange={handleSoundWaveformChange}
