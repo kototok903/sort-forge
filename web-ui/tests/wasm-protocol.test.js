@@ -600,3 +600,129 @@ test("every tracked auxiliary is consumed between uses and before removal", asyn
     }
   }
 });
+
+// Check the counters through the rebuilt Wasm -> event -> controller path.
+async function verifyOperationPlayback(algorithm, input) {
+  const engine = new PregenEngine();
+  const controller = new AnimationController();
+  await controller.initialize(engine, algorithm, input);
+  const events = engine.getAllEvents();
+  checkProtocol(events, input.length);
+  const snapshots = [structuredClone(controller.getState())];
+  for (const event of events) {
+    controller.stepForward();
+    const state = structuredClone(controller.getState());
+    const previous = snapshots.at(-1).operationCounts;
+    const expected = { ...previous };
+    if (event.type === "Compare") expected.comparisons++;
+    if (event.type === "Swap") {
+      expected.swaps++;
+      for (const ref of [event.i, event.j])
+        expected[ref.arrId === 0 ? "mainWrites" : "auxWrites"]++;
+    }
+    if (event.type === "Copy" || event.type === "Overwrite")
+      expected[event.dest.arrId === 0 ? "mainWrites" : "auxWrites"]++;
+    expect(state.operationCounts).toEqual(expected);
+    snapshots.push(state);
+  }
+  expect(controller.getState().workspace.arrays.get(0).values).toEqual(
+    [...input].sort((a, b) => a - b)
+  );
+  const counts = controller.getState().operationCounts;
+  for (let step = events.length - 1; step >= 0; step--) {
+    controller.stepBackward();
+    expect(controller.getState().operationCounts).toEqual(
+      snapshots[step].operationCounts
+    );
+    expect(controller.getState().workspace).toEqual(snapshots[step].workspace);
+  }
+  for (let step = 0; step <= events.length; step++) {
+    controller.seekTo(step);
+    expect(controller.getState().operationCounts).toEqual(
+      snapshots[step].operationCounts
+    );
+    expect(controller.getState().workspace).toEqual(snapshots[step].workspace);
+  }
+  return { counts, events };
+}
+
+for (const algorithm of ["radix_lsd", "radix_msd"]) {
+  test(`${algorithm}: zero comparisons, OR digit bounds, and reversible write counts`, async () => {
+    for (const [input, writes] of [
+      [[9, 8], 2],
+      // 8 | 7 = 15: the extra decimal pass is harmless and is counted.
+      [[8, 7], 4],
+      [[99, 98], 4],
+      // MSD stops when buckets contain one element; LSD visits every digit.
+      [[99, 28], algorithm === "radix_lsd" ? 6 : 4],
+      [[0, 0], 0],
+    ]) {
+      const { counts } = await verifyOperationPlayback(algorithm, input);
+      expect(counts).toEqual({
+        comparisons: 0,
+        mainWrites: writes,
+        auxWrites: writes,
+        swaps: 0,
+      });
+    }
+    const { counts } = await verifyOperationPlayback(
+      algorithm,
+      [2147483647, 0, 2147483646, 10]
+    );
+    expect(counts.comparisons).toBe(0);
+    expect(counts.swaps).toBe(0);
+    expect(counts.mainWrites).toBe(counts.auxWrites);
+    // Invalid inputs are rejected before auxiliary storage or operations.
+    expect(pregen_sort_with_result(algorithm, [-1, 2]).events).toEqual([
+      { type: "Done" },
+    ]);
+  });
+}
+
+test("cycle: each comparison is recorded once and saved-value exchanges count both writes", async () => {
+  const { counts } = await verifyOperationPlayback("cycle", [3, 1, 2]);
+  expect(counts).toEqual({
+    comparisons: 10,
+    mainWrites: 3,
+    auxWrites: 5,
+    swaps: 3,
+  });
+  for (const input of [
+    [2, 1, 2, 1, 0],
+    [1, 1, 1],
+    [3, 2, 1, 0, 3],
+  ]) {
+    const result = await verifyOperationPlayback("cycle", input);
+    expect(result.counts.mainWrites).toBe(result.counts.swaps);
+    expect(result.counts.auxWrites).toBe(
+      result.counts.swaps + input.length - 1
+    );
+  }
+});
+
+test("bitonic: arbitrary lengths use only main comparisons and swaps, with exact replay", async () => {
+  for (const input of [
+    [],
+    [42],
+    [2, 1],
+    [3, 1, 2],
+    [5, 4, 3, 2, 1],
+    [2147483647, -2147483648, 0, 2147483647, -1, 42, -2147483648],
+    ...[8, 9, 15, 16, 17].map((n) =>
+      Array.from({ length: n }, (_, i) => n - i)
+    ),
+  ]) {
+    const { counts, events } = await verifyOperationPlayback("bitonic", input);
+    expect(
+      events.every((event) => ["Compare", "Swap", "Done"].includes(event.type))
+    ).toBe(true);
+    expect(counts.auxWrites).toBe(0);
+    expect(counts.mainWrites).toBe(counts.swaps * 2);
+    if (input.length > 1 && (input.length & (input.length - 1)) === 0) {
+      const levels = Math.log2(input.length);
+      expect(counts.comparisons).toBe(
+        (input.length * levels * (levels + 1)) / 4
+      );
+    }
+  }
+});

@@ -20,9 +20,10 @@ impl PregenSort for RadixMsdSort {
             return events;
         }
 
-        // Find maximum value to determine number of digits
-        let max_val = *array.iter().max().unwrap();
-        if array.iter().any(|&value| value < 0) || max_val == 0 {
+        // OR bounds every nonnegative key without comparing keys. It may
+        // require one extra decimal pass. A negative key sets the sign bit.
+        let digit_bound = array.iter().fold(0, |bits, &value| bits | value);
+        if digit_bound <= 0 {
             // Radix sort MSD only works with non-negative integers
             events.push(SortEvent::Done);
             return events;
@@ -30,7 +31,7 @@ impl PregenSort for RadixMsdSort {
 
         // Calculate the highest digit position
         let mut max_exp = 1;
-        while max_val / max_exp >= RADIX as i32 {
+        while digit_bound / max_exp >= RADIX as i32 {
             max_exp *= RADIX as i32;
         }
 

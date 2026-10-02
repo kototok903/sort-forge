@@ -21,9 +21,10 @@ impl PregenSort for RadixLsdSort {
             return events;
         }
 
-        // Find maximum value to determine number of digits
-        let max_val = *array.iter().max().unwrap();
-        if array.iter().any(|&value| value < 0) || max_val == 0 {
+        // OR bounds every nonnegative key without comparing keys. It may
+        // require one extra decimal pass. A negative key sets the sign bit.
+        let digit_bound = array.iter().fold(0, |bits, &value| bits | value);
+        if digit_bound <= 0 {
             // Radix sort LSD only works with non-negative integers
             events.push(SortEvent::Done);
             return events;
@@ -33,9 +34,9 @@ impl PregenSort for RadixLsdSort {
 
         // Process each digit position
         let mut exp = 1;
-        while max_val / exp > 0 {
+        while digit_bound / exp > 0 {
             counting_sort_by_digit(array, exp, &mut output, &mut events);
-            if max_val / exp < RADIX {
+            if digit_bound / exp < RADIX {
                 break;
             }
             exp *= RADIX;

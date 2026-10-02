@@ -89,10 +89,8 @@ impl PregenSort for CycleSort {
                     pos += 1;
                 }
 
-                // Put the item to its right position
-                if item.value() != array[pos] {
-                    item.swap_with(array, pos, &mut events);
-                }
+                // The duplicate-skipping loop already established inequality.
+                item.swap_with(array, pos, &mut events);
             }
             item.consume(&mut events);
         }
