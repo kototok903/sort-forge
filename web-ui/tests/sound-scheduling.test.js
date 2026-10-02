@@ -299,6 +299,45 @@ test("cancellation stops future notes, fades active ones, and ended nodes are di
   });
 });
 
+test("pause cancels animation and fades active notes without cancelAndHoldAtTime", async () => {
+  await withAudioClock(async ({ tones, frame, advance, audio }) => {
+    const controller = new AnimationController();
+    await controller.initialize(
+      engineFor(Array(100).fill(compare)),
+      "fixture",
+      [0, 100]
+    );
+    controller.initSound();
+    controller.play();
+    frame(20);
+    advance(50);
+    const gain = tones[0].gain.gain;
+    delete gain.cancelAndHoldAtTime;
+    gain.value = 0.4;
+    gain.cancelScheduledValues = function (at) {
+      this.changes.push(["cancel", at]);
+      this.value = 0;
+    };
+    const step = controller.getState().currentStep;
+    controller.pause();
+    expect(controller.getState().playbackState).toBe("paused");
+    expect(gain.changes.slice(-3)).toEqual([
+      ["cancel", audio().currentTime],
+      ["set", 0.4, audio().currentTime],
+      ["ramp", 0, audio().currentTime + 0.005],
+    ]);
+    expect(tones[0].stops.at(-1)).toBeCloseTo(audio().currentTime + 0.005, 8);
+    advance(10);
+    expect(tones[0].disconnected && tones[0].gain.disconnected).toBe(true);
+    expect(controller.getState().currentStep).toBe(step);
+    // The animation callback was canceled, and playback can still resume.
+    expect(() => frame(10)).toThrow();
+    controller.play();
+    frame(20);
+    expect(controller.getState().currentStep).toBeGreaterThan(step);
+  });
+});
+
 for (const action of [
   "pause",
   "stop",

@@ -112,8 +112,16 @@ export class SoundEngine {
         if (tone.startTime >= now) {
           tone.oscillator.stop(now);
         } else {
-          tone.gain.gain.cancelAndHoldAtTime(now);
-          tone.gain.gain.linearRampToValueAtTime(0, now + CANCEL_FADE_SECONDS);
+          const gain = tone.gain.gain;
+          if (typeof gain.cancelAndHoldAtTime === "function") {
+            gain.cancelAndHoldAtTime(now);
+          } else {
+            // Firefox needs the current gain preserved explicitly before fading.
+            const currentGain = gain.value;
+            gain.cancelScheduledValues(now);
+            gain.setValueAtTime(currentGain, now);
+          }
+          gain.linearRampToValueAtTime(0, now + CANCEL_FADE_SECONDS);
           tone.oscillator.stop(now + CANCEL_FADE_SECONDS);
         }
       }
