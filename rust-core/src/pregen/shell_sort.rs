@@ -55,6 +55,7 @@ impl PregenSort for ShellSort {
                 if j != i {
                     saved.write_to(array, j, &mut events);
                 }
+                saved.consume(&mut events);
             }
 
             gap /= 2;

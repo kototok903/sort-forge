@@ -20,6 +20,7 @@ const ACTIVE_RANGE_LINE_GAP = 4;
 
 /** Glow settings */
 const GLOW_BLUR_RADIUS = 8;
+const CONSUMED_OPACITY = 0.3;
 
 /**
  * Canvas-based renderer for sort visualization.
@@ -138,9 +139,11 @@ export class CanvasRenderer implements IRenderer {
     for (let i = 0; i < array.length; i++) {
       const complete =
         storage.id === workspace.mainArrayId && i < completedCount;
+      ctx.globalAlpha = storage.consumed[i] ? CONSUMED_OPACITY : 1;
       drawBar(i, complete ? colors.sorted : colors.default, false);
     }
 
+    ctx.globalAlpha = 1;
     if (!isSorted) {
       const highlightColorMap: Record<
         HighlightKind,

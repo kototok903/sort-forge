@@ -142,6 +142,9 @@ fn merge(
         k += 1;
     }
     // Once left is exhausted, the right tail is already in its final position.
+    events.push(SortEvent::ConsumeArray {
+        arr_id: AUX_ARRAY_ID,
+    });
     events.push(SortEvent::ExitRange {
         arr_id: AUX_ARRAY_ID,
         lo: 0,

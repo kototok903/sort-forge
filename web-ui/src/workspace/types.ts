@@ -5,10 +5,21 @@ export interface Range {
   hi: number;
 }
 
+/**
+ * Records indices that got either consumed or unconsumed
+ * (only one is possible at a time) by an event.
+ */
+export interface ConsumptionChange {
+  indices: number[];
+  consumed: boolean;
+}
+
 export interface ArrayState {
   id: ArrayId;
   values: ElementValue[];
   visible: boolean;
+  consumed: boolean[];
+  consumptionHistory: ConsumptionChange[];
   rangeStack: Range[];
 }
 

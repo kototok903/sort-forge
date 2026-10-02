@@ -69,6 +69,12 @@ impl SavedValue {
         std::mem::swap(value, &mut array[idx]);
     }
 
+    pub(super) fn consume(&mut self, events: &mut Vec<SortEvent>) {
+        events.push(SortEvent::ConsumeArray {
+            arr_id: self.arr_id,
+        });
+    }
+
     pub(super) fn remove(self, events: &mut Vec<SortEvent>) {
         events.push(SortEvent::RemoveArray {
             arr_id: self.arr_id,

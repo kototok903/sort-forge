@@ -88,6 +88,7 @@ fn msd_sort(
     for idx in 0..(hi - lo) {
         temp.copy_to(array, idx, lo + idx, events);
     }
+    temp.consume(events);
     temp.exit_range(hi - lo, events);
 
     // Exit range

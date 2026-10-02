@@ -142,6 +142,9 @@ fn merge(
         });
         array[k] = aux[src];
     }
+    events.push(SortEvent::ConsumeArray {
+        arr_id: AUX_ARRAY_ID,
+    });
     events.push(SortEvent::ExitRange {
         arr_id: AUX_ARRAY_ID,
         lo,

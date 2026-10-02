@@ -47,6 +47,7 @@ impl PregenSort for InsertionSort {
             if j != i {
                 saved.write_to(array, j, &mut events);
             }
+            saved.consume(&mut events);
         }
 
         saved.remove(&mut events);

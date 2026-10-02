@@ -226,6 +226,7 @@ fn insertion_sort_range(
         if j != i {
             saved.write_to(array, j, events);
         }
+        saved.consume(events);
     }
 }
 

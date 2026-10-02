@@ -19,12 +19,15 @@ initSync({
 
 function checkProtocol(events, length) {
   const arrays = new Map([[0, length]]);
+  const consumed = new Map([[0, Array(length).fill(false)]]);
   for (const event of events) {
     let refs = [];
     switch (event.type) {
       case "Compare":
       case "Swap":
         refs = [event.i, event.j];
+        if (event.type === "Swap")
+          for (const ref of refs) consumed.get(ref.arrId)[ref.idx] = false;
         break;
       case "Copy":
       case "Overwrite":
@@ -33,6 +36,7 @@ function checkProtocol(events, length) {
           event.old_val === null || typeof event.old_val === "number"
         ).toBe(true);
         expect(typeof event.new_val).toBe("number");
+        consumed.get(event.dest.arrId)[event.dest.idx] = false;
         break;
       case "AddArray":
         expect(arrays.has(event.arrId)).toBe(false);
@@ -42,6 +46,7 @@ function checkProtocol(events, length) {
           length: expect.any(Number),
         });
         arrays.set(event.arrId, event.length);
+        consumed.set(event.arrId, Array(event.length).fill(false));
         break;
       case "RemoveArray":
         expect(arrays.delete(event.arrId)).toBe(true);
@@ -51,6 +56,11 @@ function checkProtocol(events, length) {
         expect(arrays.has(event.arrId)).toBe(true);
         expect(event.lo).toBeGreaterThanOrEqual(0);
         expect(event.hi).toBeLessThan(arrays.get(event.arrId));
+        break;
+      case "ConsumeArray":
+        expect(arrays.has(event.arrId)).toBe(true);
+        expect(event.arrId).not.toBe(0);
+        consumed.get(event.arrId).fill(true);
         break;
       case "Done":
         break;
@@ -63,6 +73,7 @@ function checkProtocol(events, length) {
         idx: expect.any(Number),
       });
       expect(arrays.has(ref.arrId)).toBe(true);
+      expect(consumed.get(ref.arrId)[ref.idx]).toBe(false);
       expect(ref.idx).toBeGreaterThanOrEqual(0);
       expect(ref.idx).toBeLessThan(arrays.get(ref.arrId));
     }
@@ -381,9 +392,13 @@ async function checkWorkspaceHistory(algorithm, input, everySeek = true) {
   if (!everySeek) {
     events.forEach((event, idx) => {
       if (
-        ["AddArray", "RemoveArray", "EnterRange", "ExitRange"].includes(
-          event.type
-        )
+        [
+          "AddArray",
+          "RemoveArray",
+          "EnterRange",
+          "ExitRange",
+          "ConsumeArray",
+        ].includes(event.type)
       )
         steps.push(idx, idx + 1);
     });
@@ -531,4 +546,57 @@ test("full-buffer merge has no initial clone and stably copies both halves", () 
       new_val: 1,
     },
   ]);
+});
+
+test("every tracked auxiliary is consumed between uses and before removal", async () => {
+  for (const algorithm of [
+    "merge",
+    "merge_half_buffer",
+    "timsort",
+    "radix_lsd",
+    "radix_msd",
+    "insertion",
+    "binary_insertion",
+    "shell",
+    "cycle",
+    "introsort",
+  ]) {
+    for (const input of [
+      [0, 1, 2, 2, 3],
+      [3, 0, 2, 2, 1],
+    ]) {
+      const { events, states } = await checkWorkspaceHistory(algorithm, input);
+      expect(events.some((event) => event.type === "ConsumeArray")).toBe(true);
+      for (let idx = 0; idx < events.length; idx++) {
+        const event = events[idx];
+        if (
+          (event.type === "Copy" || event.type === "Overwrite") &&
+          event.dest.arrId !== 0
+        ) {
+          const before = states[idx].arrays.get(event.dest.arrId);
+          const after = states[idx + 1].arrays.get(event.dest.arrId);
+          expect(after.consumed).toEqual(
+            before.consumed.map((flag, slot) =>
+              slot === event.dest.idx ? false : flag
+            )
+          );
+        }
+        if (event.type === "ConsumeArray") {
+          const before = states[idx].arrays.get(event.arrId);
+          const after = states[idx + 1].arrays.get(event.arrId);
+          expect(after.values).toEqual(before.values);
+          expect(after.rangeStack).toEqual(before.rangeStack);
+          expect(after.consumed).toEqual(
+            before.values.map((value) => value !== null)
+          );
+        }
+        if (event.type === "RemoveArray") {
+          const array = states[idx].arrays.get(event.arrId);
+          expect(array.consumed).toEqual(
+            array.values.map((value) => value !== null)
+          );
+        }
+      }
+    }
+  }
 });

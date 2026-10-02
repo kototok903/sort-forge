@@ -86,6 +86,7 @@ fn counting_sort_by_digit(
     for idx in 0..n {
         output.copy_to(array, idx, idx, events);
     }
+    output.consume(events);
     output.exit_range(n, events);
     events.push(SortEvent::ExitRange {
         arr_id: MAIN_ARRAY_ID,

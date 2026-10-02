@@ -132,6 +132,7 @@ fn insertion_sort_range(
         if j != i {
             saved.write_to(array, j, events);
         }
+        saved.consume(events);
     }
 }
 
@@ -172,6 +173,8 @@ fn merge(
             j += 1;
         }
     }
+    left.consume(events);
+    right.consume(events);
     left.exit_range(left_len, events);
     right.exit_range(right_len, events);
 }

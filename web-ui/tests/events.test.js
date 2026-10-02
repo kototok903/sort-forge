@@ -61,6 +61,22 @@ describe("array-aware event semantics", () => {
     expect(isMutationEvent(copy)).toBe(true);
   });
 
+  test("auxiliary writes and consumption require retained usage history", () => {
+    for (const event of [
+      { type: "ConsumeArray", arrId: 1 },
+      { type: "Overwrite", dest: { arrId: 1, idx: 0 }, old_val: 1, new_val: 1 },
+      {
+        type: "Copy",
+        src: main(0),
+        dest: { arrId: 1, idx: 0 },
+        old_val: 1,
+        new_val: 1,
+      },
+      { type: "Swap", i: main(0), j: { arrId: 1, idx: 0 } },
+    ])
+      expect(inverseEvent(event)).toBeNull();
+  });
+
   test("range undo preserves its array and bounds", () => {
     const enter = { type: "EnterRange", arrId: 3, lo: 1, hi: 4 };
     expect(inverseEvent(enter)).toEqual({ ...enter, type: "ExitRange" });

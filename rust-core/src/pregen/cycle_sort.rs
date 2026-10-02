@@ -41,6 +41,7 @@ impl PregenSort for CycleSort {
 
             // If item is already in correct position
             if pos == cycle_start {
+                item.consume(&mut events);
                 continue;
             }
 
@@ -93,6 +94,7 @@ impl PregenSort for CycleSort {
                     item.swap_with(array, pos, &mut events);
                 }
             }
+            item.consume(&mut events);
         }
 
         item.remove(&mut events);

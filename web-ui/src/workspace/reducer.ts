@@ -22,6 +22,8 @@ export function createWorkspace(values: readonly number[]): WorkspaceState {
           id: MAIN_ARRAY_ID,
           values: [...values],
           visible: true,
+          consumed: Array<boolean>(values.length).fill(false),
+          consumptionHistory: [],
           rangeStack: [],
         },
       ],
@@ -92,6 +94,55 @@ function assertRange(array: ArrayState, range: Range): void {
   }
 }
 
+function validateWriteConsumption(
+  array: ArrayState,
+  idx: number,
+  mainId: ArrayId,
+  forward: boolean,
+  historyOffset = 1
+): void {
+  if (array.id === mainId || forward) return;
+  const change = array.consumptionHistory.at(-historyOffset);
+  if (
+    !change ||
+    change.consumed ||
+    change.indices.length > 1 ||
+    change.indices.some((changedIdx) => changedIdx !== idx) ||
+    array.consumed[idx]
+  ) {
+    throw new Error("Write undo does not match consumption history");
+  }
+}
+
+function recordConsumption(
+  array: ArrayState,
+  indices: number[],
+  consumed: boolean
+): void {
+  // Empty entries preserve alignment for operations that change no flags.
+  array.consumptionHistory.push({ indices, consumed });
+  for (const idx of indices) array.consumed[idx] = consumed;
+}
+
+function undoConsumption(array: ArrayState): void {
+  const change = array.consumptionHistory.pop()!;
+  for (const idx of change.indices) array.consumed[idx] = !change.consumed;
+}
+
+function applyWriteConsumption(
+  array: ArrayState,
+  idx: number,
+  mainId: ArrayId,
+  forward: boolean
+): void {
+  if (array.id === mainId) return;
+  if (forward) {
+    recordConsumption(array, array.consumed[idx] ? [idx] : [], false);
+  } else {
+    undoConsumption(array);
+  }
+}
+
 /**
  * Mutates the workspace in place; every playback path uses these same rules.
  * Resolve and validate an operation completely before changing its state.
@@ -106,6 +157,35 @@ export function applyWorkspaceEvent(
     case "Swap": {
       const i = getElementArray(workspace, event.i);
       const j = getElementArray(workspace, event.j);
+      // When both endpoints share storage, reverse their consumption changes in order.
+      const sameSlot =
+        event.i.arrId === event.j.arrId && event.i.idx === event.j.idx;
+      if (forward) {
+        applyWriteConsumption(i, event.i.idx, workspace.mainArrayId, true);
+        if (!sameSlot)
+          applyWriteConsumption(j, event.j.idx, workspace.mainArrayId, true);
+      } else {
+        validateWriteConsumption(j, event.j.idx, workspace.mainArrayId, false);
+        // Check both history entries before changing either endpoint.
+        if (!sameSlot && i === j && i.id !== workspace.mainArrayId) {
+          validateWriteConsumption(
+            i,
+            event.i.idx,
+            workspace.mainArrayId,
+            false,
+            2
+          );
+        } else if (!sameSlot)
+          validateWriteConsumption(
+            i,
+            event.i.idx,
+            workspace.mainArrayId,
+            false
+          );
+        applyWriteConsumption(j, event.j.idx, workspace.mainArrayId, false);
+        if (!sameSlot)
+          applyWriteConsumption(i, event.i.idx, workspace.mainArrayId, false);
+      }
       const value = i.values[event.i.idx];
       i.values[event.i.idx] = j.values[event.j.idx];
       j.values[event.j.idx] = value;
@@ -130,6 +210,18 @@ export function applyWorkspaceEvent(
       ) {
         throw new Error("Recorded copy value does not match its source");
       }
+      validateWriteConsumption(
+        dest,
+        event.dest.idx,
+        workspace.mainArrayId,
+        forward
+      );
+      applyWriteConsumption(
+        dest,
+        event.dest.idx,
+        workspace.mainArrayId,
+        forward
+      );
       dest.values[event.dest.idx] = forward ? event.new_val : event.old_val;
       break;
     }
@@ -171,11 +263,15 @@ export function applyWorkspaceEvent(
           id: event.arrId,
           values: Array<ElementValue>(event.length).fill(null),
           visible: true,
+          consumed: Array<boolean>(event.length).fill(false),
+          consumptionHistory: [],
           rangeStack: [],
         });
       } else {
         const array = getArray(workspace, event.arrId);
         if (
+          array.consumed.some(Boolean) ||
+          array.consumptionHistory.length !== 0 ||
           array.rangeStack.length !== 0 ||
           array.values.length !== event.length ||
           array.values.some((value) => value !== null)
@@ -196,6 +292,32 @@ export function applyWorkspaceEvent(
         throw new Error(`Invalid removal state for array ${event.arrId}`);
       }
       array.visible = !forward;
+      break;
+    }
+    case "ConsumeArray": {
+      const array = getArray(workspace, event.arrId);
+      if (event.arrId === workspace.mainArrayId) {
+        throw new Error("Cannot consume the main array");
+      }
+      if (forward) {
+        const active: number[] = [];
+        for (let idx = 0; idx < array.values.length; idx++) {
+          if (array.values[idx] !== null && !array.consumed[idx])
+            active.push(idx);
+        }
+        recordConsumption(array, active, true);
+      } else {
+        const change = array.consumptionHistory.at(-1);
+        if (
+          !change?.consumed ||
+          change.indices.some((idx) => !array.consumed[idx])
+        ) {
+          throw new Error(
+            "Consumption undo does not match consumption history"
+          );
+        }
+        undoConsumption(array);
+      }
       break;
     }
     case "Done":

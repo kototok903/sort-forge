@@ -71,14 +71,26 @@ pub enum SortEvent {
         #[serde(rename = "arrId")]
         arr_id: ArrayId,
     },
+    /// Dim all populated slots; writes reactivate only their destinations.
+    /// Undo uses usage history retained in the playback workspace.
+    ConsumeArray {
+        #[serde(rename = "arrId")]
+        arr_id: ArrayId,
+    },
     Done,
 }
 
 impl SortEvent {
     /// Inverse when it can be expressed without retained workspace state.
-    /// Lifecycle events require directional application to a workspace instead.
+    /// Auxiliary writes, consumption, and lifetimes require workspace history.
     /// Copy undo restores only the destination; it never copies into the source.
     pub fn inverse(&self) -> Option<SortEvent> {
+        if matches!(self,
+            SortEvent::Overwrite { dest, .. } | SortEvent::Copy { dest, .. } if dest.arr_id != MAIN_ARRAY_ID
+        ) || matches!(self, SortEvent::Swap { i, j } if i.arr_id != MAIN_ARRAY_ID || j.arr_id != MAIN_ARRAY_ID)
+        {
+            return None;
+        }
         Some(match self {
             SortEvent::Overwrite {
                 dest,
@@ -110,18 +122,20 @@ impl SortEvent {
                 hi: *hi,
             },
             SortEvent::AddArray { .. } | SortEvent::RemoveArray { .. } => return None,
+            SortEvent::ConsumeArray { .. } => return None,
             other => other.clone(),
         })
     }
 
-    /// Whether the event changes element values or array membership.
+    /// Whether the event changes element values, array membership, or usage.
     pub fn is_mutation(&self) -> bool {
         match self {
             SortEvent::Swap { .. }
             | SortEvent::Overwrite { .. }
             | SortEvent::Copy { .. }
             | SortEvent::AddArray { .. }
-            | SortEvent::RemoveArray { .. } => true,
+            | SortEvent::RemoveArray { .. }
+            | SortEvent::ConsumeArray { .. } => true,
             SortEvent::Compare { .. }
             | SortEvent::EnterRange { .. }
             | SortEvent::ExitRange { .. }
@@ -147,7 +161,7 @@ mod tests {
 
     #[test]
     fn inverses_preserve_array_identity_and_empty_values() {
-        let target = ElementRef { arr_id: 2, idx: 3 };
+        let target = ElementRef::main(3);
         let overwrite = SortEvent::Overwrite {
             dest: target,
             old_val: None,
@@ -213,6 +227,23 @@ mod tests {
             None
         );
         assert_eq!(SortEvent::RemoveArray { arr_id: 1 }.inverse(), None);
+    }
+
+    #[test]
+    fn consumption_undo_requires_workspace_history() {
+        let event = SortEvent::ConsumeArray { arr_id: 1 };
+        assert_eq!(event.inverse(), None);
+        assert!(event.is_mutation());
+        assert_eq!(
+            SortEvent::Copy {
+                src: ElementRef::main(0),
+                dest: ElementRef { arr_id: 1, idx: 0 },
+                old_val: None,
+                new_val: Some(1)
+            }
+            .inverse(),
+            None
+        );
     }
 
     #[test]
@@ -306,6 +337,7 @@ mod wasm_tests {
                 lo: 0,
                 hi: 1,
             },
+            SortEvent::ConsumeArray { arr_id: 1 },
             SortEvent::RemoveArray { arr_id: 1 },
             SortEvent::Done,
         ];
@@ -315,7 +347,7 @@ mod wasm_tests {
         let array = Array::from(&js);
         assert_eq!(get(&array.get(0), "length").as_f64(), Some(2.0));
         assert!(get(&array.get(0), "values").is_undefined());
-        for idx in [0, 5, 6, 7] {
+        for idx in [0, 5, 6, 7, 8] {
             assert_eq!(get(&array.get(idx), "arrId").as_f64(), Some(1.0));
             assert!(get(&array.get(idx), "arr_id").is_undefined());
         }

@@ -42,6 +42,7 @@ impl PregenSort for BinaryInsertionSort {
             if insert_pos != i {
                 saved.write_to(array, insert_pos, &mut events);
             }
+            saved.consume(&mut events);
         }
 
         saved.remove(&mut events);

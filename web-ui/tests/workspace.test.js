@@ -316,3 +316,176 @@ describe("workspace controller integration", () => {
     }
   });
 });
+
+test("whole-array dimming reactivates only written slots and restores usage on undo/seek", async () => {
+  const usageEvents = [
+    { type: "AddArray", arrId: 1, length: 3 },
+    { type: "Copy", src: main(0), dest: ref(1, 0), old_val: null, new_val: 3 },
+    { type: "Copy", src: main(1), dest: ref(1, 1), old_val: null, new_val: 2 },
+    { type: "ConsumeArray", arrId: 1 },
+    { type: "Copy", src: main(0), dest: ref(1, 0), old_val: 3, new_val: 3 },
+    { type: "ConsumeArray", arrId: 1 },
+    { type: "RemoveArray", arrId: 1 },
+    { type: "Done" },
+  ];
+  const controller = new AnimationController();
+  await controller.initialize(fixtureEngine(usageEvents), "fixture", [3, 2, 1]);
+  const states = [structuredClone(controller.getState().workspace)];
+  for (const _ of usageEvents) {
+    controller.stepForward();
+    states.push(structuredClone(controller.getState().workspace));
+  }
+  expect(states[4].arrays.get(1)).toMatchObject({
+    consumed: [true, true, false],
+    values: [3, 2, null],
+  });
+  expect(states[5].arrays.get(1)).toMatchObject({
+    consumed: [false, true, false],
+    values: [3, 2, null],
+  });
+  expect(states[7].arrays.get(1)).toMatchObject({
+    consumed: [true, true, false],
+    visible: false,
+  });
+  for (let step = usageEvents.length - 1; step >= 0; step--) {
+    controller.stepBackward();
+    expect(controller.getState().workspace).toEqual(states[step]);
+  }
+  for (let step = 0; step <= usageEvents.length; step++) {
+    controller.seekTo(step);
+    expect(controller.getState().workspace).toEqual(states[step]);
+  }
+  const workspace = createWorkspace([3]);
+  applyWorkspaceEvent(workspace, usageEvents[0]);
+  for (const event of [
+    { type: "ConsumeArray", arrId: 0 },
+    { type: "ConsumeArray", arrId: 2 },
+  ])
+    expect(() => applyWorkspaceEvent(workspace, event)).toThrow();
+  expect(() =>
+    applyWorkspaceEvent(workspace, usageEvents[3], "backward")
+  ).toThrow();
+  applyWorkspaceEvent(workspace, { type: "RemoveArray", arrId: 1 });
+  expect(() => applyWorkspaceEvent(workspace, usageEvents[3])).toThrow();
+});
+
+test("swaps and overwrites reactivate destinations and restore mixed usage on rewind", () => {
+  for (const swap of [
+    { type: "Swap", i: ref(1, 0), j: ref(1, 1) },
+    { type: "Swap", i: ref(1, 0), j: ref(1, 0) },
+    { type: "Swap", i: main(0), j: ref(1, 1) },
+    { type: "Swap", i: ref(1, 0), j: ref(2, 0) },
+  ]) {
+    const workspace = createWorkspace([3, 2]);
+    for (const event of [
+      { type: "AddArray", arrId: 1, length: 2 },
+      { type: "AddArray", arrId: 2, length: 1 },
+      {
+        type: "Copy",
+        src: main(0),
+        dest: ref(1, 0),
+        old_val: null,
+        new_val: 3,
+      },
+      {
+        type: "Copy",
+        src: main(1),
+        dest: ref(1, 1),
+        old_val: null,
+        new_val: 2,
+      },
+      {
+        type: "Copy",
+        src: main(0),
+        dest: ref(2, 0),
+        old_val: null,
+        new_val: 3,
+      },
+      { type: "ConsumeArray", arrId: 1 },
+      { type: "ConsumeArray", arrId: 2 },
+      { type: "Overwrite", dest: ref(1, 0), old_val: 3, new_val: 3 },
+    ])
+      applyWorkspaceEvent(workspace, event);
+    const before = structuredClone(workspace);
+    applyWorkspaceEvent(workspace, swap);
+    for (const ref of [swap.i, swap.j])
+      expect(workspace.arrays.get(ref.arrId).consumed[ref.idx]).toBe(false);
+    applyWorkspaceEvent(workspace, swap, "backward");
+    expect(workspace).toEqual(before);
+  }
+});
+
+test("consumption uses the same timed playback steps as ranges", async () => {
+  const originalRequest = globalThis.requestAnimationFrame;
+  const originalCancel = globalThis.cancelAnimationFrame;
+  let callback;
+  globalThis.requestAnimationFrame = (next) => {
+    callback = next;
+    return 1;
+  };
+  globalThis.cancelAnimationFrame = () => {};
+  try {
+    const events = [
+      { type: "AddArray", arrId: 1, length: 1 },
+      { type: "EnterRange", arrId: 1, lo: 0, hi: 0 },
+      { type: "ConsumeArray", arrId: 1 },
+      { type: "ExitRange", arrId: 1, lo: 0, hi: 0 },
+      {
+        type: "Copy",
+        src: main(0),
+        dest: ref(1, 0),
+        old_val: null,
+        new_val: 3,
+      },
+    ];
+    const controller = new AnimationController();
+    await controller.initialize(fixtureEngine(events), "fixture", [3]);
+    controller.play();
+    const start = performance.now();
+    for (let step = 1; step <= events.length; step++) {
+      callback(start + step * (1000 / 60) + 0.1);
+      expect(controller.getState().currentStep).toBe(step);
+    }
+    controller.pause();
+  } finally {
+    globalThis.requestAnimationFrame = originalRequest;
+    globalThis.cancelAnimationFrame = originalCancel;
+  }
+});
+
+test("no-op consumption entries keep repeated consumption and equal writes aligned on undo", () => {
+  const workspace = createWorkspace([3]);
+  const write = {
+    type: "Copy",
+    src: main(0),
+    dest: ref(1, 0),
+    old_val: 3,
+    new_val: 3,
+  };
+  const events = [
+    { type: "AddArray", arrId: 1, length: 2 },
+    { ...write, old_val: null },
+    { type: "ConsumeArray", arrId: 1 },
+    { type: "ConsumeArray", arrId: 1 },
+    write,
+    write,
+    { type: "ConsumeArray", arrId: 1 },
+  ];
+  const states = [structuredClone(workspace)];
+  for (const event of events) {
+    applyWorkspaceEvent(workspace, event);
+    states.push(structuredClone(workspace));
+  }
+  expect(workspace.arrays.get(1).consumptionHistory).toEqual([
+    { indices: [], consumed: false },
+    { indices: [0], consumed: true },
+    { indices: [], consumed: true },
+    { indices: [0], consumed: false },
+    { indices: [], consumed: false },
+    { indices: [0], consumed: true },
+  ]);
+  for (let idx = events.length - 1; idx >= 0; idx--) {
+    applyWorkspaceEvent(workspace, events[idx], "backward");
+    expect(workspace).toEqual(states[idx]);
+  }
+});

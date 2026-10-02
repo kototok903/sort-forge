@@ -1,4 +1,4 @@
-//! Fixed-capacity scratch storage with explicit empty slots and recorded transfers.
+//! Reusable multi-item array to be used as temporary storage.
 
 use crate::events::{ArrayId, ElementRef, ElementValue, SortEvent};
 
@@ -75,6 +75,12 @@ impl RecordedBuffer {
             arr_id: self.arr_id,
             lo: 0,
             hi: length - 1,
+        });
+    }
+
+    pub(super) fn consume(&mut self, events: &mut Vec<SortEvent>) {
+        events.push(SortEvent::ConsumeArray {
+            arr_id: self.arr_id,
         });
     }
 

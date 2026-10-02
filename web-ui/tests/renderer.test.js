@@ -169,3 +169,97 @@ test("renderer targets highlights and ranges per array, skips nulls, and sorts o
     else globalThis.window = originalWindow;
   }
 });
+
+test("consumed buffers dim all populated bars without changing geometry or main", () => {
+  const originalWindow = globalThis.window;
+  globalThis.window = { devicePixelRatio: 1 };
+  try {
+    const draws = [];
+    const stack = [];
+    const ctx = {
+      globalAlpha: 1,
+      setTransform() {},
+      beginPath() {},
+      rect() {},
+      clip() {},
+      strokeRect() {},
+      save() {
+        stack.push(this.globalAlpha);
+      },
+      restore() {
+        this.globalAlpha = stack.pop();
+      },
+      fillRect(x, y, width, height) {
+        draws.push({
+          x,
+          y,
+          width,
+          height,
+          color: this.fillStyle,
+          opacity: this.globalAlpha,
+        });
+      },
+    };
+    const renderer = new CanvasRenderer();
+    renderer.setCanvas({
+      getContext: () => ctx,
+      getBoundingClientRect: () => ({ width: 114, height: 107 }),
+    });
+    const workspace = workspaceWith([3]);
+    workspace.arrays.get(1).values = [0, null, 1];
+    const state = {
+      workspace,
+      completedCount: 0,
+      minValue: 0,
+      maxValue: 1,
+      highlights: [],
+    };
+    renderer.render(state);
+    const original = structuredClone(draws);
+    draws.length = 0;
+    applyWorkspaceEvent(workspace, {
+      type: "ConsumeArray",
+      arrId: 1,
+    });
+    renderer.render(state);
+    expect(draws).toEqual(
+      original
+        .map((draw) => ({ ...draw, opacity: draw.y < 45 ? 0.3 : 1 }))
+        .map((draw, idx) => (idx === 0 ? original[0] : draw))
+    );
+    expect(draws.filter((draw) => draw.opacity === 0.3)).toHaveLength(2);
+    expect(workspace.arrays.get(1).values).toEqual([0, null, 1]);
+    const dimmed = structuredClone(draws);
+    const write = {
+      type: "Copy",
+      src: { arrId: 0, idx: 0 },
+      dest: { arrId: 1, idx: 2 },
+      old_val: 1,
+      new_val: 1,
+    };
+    draws.length = 0;
+    applyWorkspaceEvent(workspace, write);
+    renderer.render(state);
+    expect(draws.filter((draw) => draw.opacity === 0.3)).toHaveLength(1);
+    expect(draws).toEqual(
+      dimmed.map((draw) =>
+        draw.x === 27 && draw.y === 7 ? { ...draw, opacity: 1 } : draw
+      )
+    );
+    draws.length = 0;
+    applyWorkspaceEvent(workspace, write, "backward");
+    renderer.render(state);
+    expect(draws).toEqual(dimmed);
+    draws.length = 0;
+    applyWorkspaceEvent(
+      workspace,
+      { type: "ConsumeArray", arrId: 1 },
+      "backward"
+    );
+    renderer.render(state);
+    expect(draws).toEqual(original);
+  } finally {
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+  }
+});
