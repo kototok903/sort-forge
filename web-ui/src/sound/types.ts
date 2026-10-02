@@ -4,6 +4,9 @@
  */
 export const SOUND_WAVEFORMS = ["none", "sine", "triangle", "square"] as const;
 
+/** Fixed offset from an event's visual deadline to its scheduled sound. */
+export const AUDIO_DELAY_SECONDS = 0.05;
+
 export type SoundWaveform = (typeof SOUND_WAVEFORMS)[number];
 
 export const SOUND_WAVEFORM_LABELS: Record<SoundWaveform, string> = {

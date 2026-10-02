@@ -71,6 +71,7 @@ export class AnimationController {
 
   /** Set the sort engine */
   setEngine(engine: ISortEngine): void {
+    this.resetPlaybackTiming();
     this.engine = engine;
   }
 
@@ -109,8 +110,8 @@ export class AnimationController {
     }
     this.direction = "forward";
     this.playbackState = "playing";
-    this.lastFrameTime = performance.now();
-    this.accumulatedTime = 0;
+    this.resumeSound();
+    this.resetPlaybackTiming();
     this.startAnimationLoop();
     this.notifyListeners();
   }
@@ -126,14 +127,15 @@ export class AnimationController {
     }
     this.direction = "backward";
     this.playbackState = "playing";
-    this.lastFrameTime = performance.now();
-    this.accumulatedTime = 0;
+    this.resumeSound();
+    this.resetPlaybackTiming();
     this.startAnimationLoop();
     this.notifyListeners();
   }
 
   /** Pause playback */
   pause(): void {
+    this.soundEngine.cancelPlayback();
     this.playbackState = "paused";
     this.stopAnimationLoop();
     this.notifyListeners();
@@ -148,6 +150,7 @@ export class AnimationController {
 
   /** Reset to initial state */
   reset(): void {
+    this.resetPlaybackTiming();
     this.resetWorkspaceState(this.initialArray);
     this.currentStep = 0;
     this.engine?.reset();
@@ -169,6 +172,8 @@ export class AnimationController {
   /** Step forward one event */
   stepForward(): void {
     if (!this.engine) return;
+    this.resumeSound();
+    this.resetPlaybackTiming();
 
     const event = this.getNextPlaybackEvents(1)[0];
     if (event) {
@@ -189,6 +194,8 @@ export class AnimationController {
     const event = this.getPlaybackEventAt(targetStep);
     if (!event) return;
 
+    this.resumeSound();
+    this.resetPlaybackTiming();
     this.soundEngine.playEvent(event, this.workspace, "backward");
     if (event.type !== "CompleteElement") {
       applyWorkspaceEvent(this.workspace, event, "backward");
@@ -208,6 +215,7 @@ export class AnimationController {
   /** Seek to a specific step */
   seekTo(step: number): void {
     if (!this.engine || !this.engine.canSeek) return;
+    this.resetPlaybackTiming();
 
     const targetStep = Math.max(0, Math.min(step, this.totalSteps));
 
@@ -246,7 +254,9 @@ export class AnimationController {
 
   /** Set playback speed */
   setSpeed(speed: number): void {
-    this.speed = Math.max(SPEED_MIN, Math.min(SPEED_MAX, speed));
+    const nextSpeed = Math.max(SPEED_MIN, Math.min(SPEED_MAX, speed));
+    if (nextSpeed !== this.speed) this.resetPlaybackTiming();
+    this.speed = nextSpeed;
     this.notifyListeners();
   }
 
@@ -295,6 +305,12 @@ export class AnimationController {
   }
 
   // --- Private methods ---
+
+  private resetPlaybackTiming(): void {
+    this.lastFrameTime = performance.now();
+    this.accumulatedTime = 0;
+    this.soundEngine.beginPlayback(this.lastFrameTime);
+  }
 
   private getCompletedCount(): number {
     return this.sortSteps === null
@@ -390,14 +406,20 @@ export class AnimationController {
 
       const eventsToProcess = Math.floor(this.accumulatedTime / msPerEvent);
       if (eventsToProcess > 0 && this.engine) {
+        const firstEventTime = time - this.accumulatedTime + msPerEvent;
         this.accumulatedTime -= eventsToProcess * msPerEvent;
 
         if (this.direction === "forward") {
           // Forward playback (apply visuals once per frame)
           const batch = this.getNextPlaybackEvents(eventsToProcess);
           let lastEvent: PlaybackEvent | null = null;
-          for (const event of batch) {
-            this.soundEngine.playEvent(event, this.workspace);
+          for (const [i, event] of batch.entries()) {
+            this.soundEngine.scheduleEvent(
+              event,
+              this.workspace,
+              "forward",
+              firstEventTime + i * msPerEvent
+            );
             if (event.type !== "CompleteElement") {
               applyWorkspaceEvent(this.workspace, event);
             }
@@ -423,7 +445,12 @@ export class AnimationController {
               break;
             }
 
-            this.soundEngine.playEvent(event, this.workspace, "backward");
+            this.soundEngine.scheduleEvent(
+              event,
+              this.workspace,
+              "backward",
+              firstEventTime + i * msPerEvent
+            );
             if (event.type !== "CompleteElement") {
               applyWorkspaceEvent(this.workspace, event, "backward");
             }

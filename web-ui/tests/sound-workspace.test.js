@@ -10,6 +10,7 @@ function withAudioContext(check) {
     value: 0,
     setValueAtTime() {},
     linearRampToValueAtTime() {},
+    cancelAndHoldAtTime() {},
   });
   globalThis.AudioContext = class {
     currentTime = 0;
