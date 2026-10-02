@@ -89,7 +89,7 @@ export class CanvasRenderer implements IRenderer {
       ? Math.min(BAR_GAP_MAX, (width / barCount) * BAR_GAP_RATIO)
       : 0;
     const barWidth = (width - gap * (barCount - 1)) / barCount;
-    const valueRange = maxValue - minValue || 1;
+    const valueRange = maxValue - minValue;
     const maxBarHeight = Math.max(
       0,
       height - ACTIVE_RANGE_LINE_HEIGHT - ACTIVE_RANGE_LINE_GAP
@@ -113,9 +113,11 @@ export class CanvasRenderer implements IRenderer {
     ) => {
       const value = array[index];
       if (value === null) return;
-      const normalizedValue = (value - minValue) / valueRange;
       const barHeight =
-        barBaseHeight + normalizedValue * (maxBarHeight - barBaseHeight);
+        valueRange === 0
+          ? maxBarHeight / 2 // when all values are the same, make them half max height
+          : barBaseHeight +
+            ((value - minValue) / valueRange) * (maxBarHeight - barBaseHeight);
       const x = originX + index * (barWidth + gap);
       const y = originY + maxBarHeight - barHeight;
 

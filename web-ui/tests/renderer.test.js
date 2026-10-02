@@ -4,6 +4,58 @@ import { CanvasRenderer } from "@/renderer/CanvasRenderer";
 import { createWorkspace, applyWorkspaceEvent } from "@/workspace/reducer";
 import { THEMES, DEFAULT_THEME_ID } from "@/themes/themes";
 
+test("equal-value bars use half the available height in main and auxiliary arrays", () => {
+  const originalWindow = globalThis.window;
+  globalThis.window = { devicePixelRatio: 1 };
+  try {
+    const draws = [];
+    const ctx = {
+      setTransform() {},
+      save() {},
+      restore() {},
+      beginPath() {},
+      rect() {},
+      clip() {},
+      strokeRect() {},
+      fillRect(x, y, width, height) {
+        draws.push({ x, y, width, height, color: this.fillStyle });
+      },
+    };
+    const renderer = new CanvasRenderer();
+    renderer.setCanvas({
+      getContext: () => ctx,
+      getBoundingClientRect: () => ({ width: 114, height: 107 }),
+    });
+    const colors = THEMES[DEFAULT_THEME_ID].viz;
+    for (const value of [0, 55]) {
+      const workspace = createWorkspace(Array(10).fill(value));
+      applyWorkspaceEvent(workspace, { type: "AddArray", arrId: 1, length: 2 });
+      workspace.arrays.get(1).values[0] = value;
+      draws.length = 0;
+      renderer.render({
+        workspace,
+        completedCount: 0,
+        minValue: value,
+        maxValue: value,
+        highlights: [],
+      });
+      const bars = draws.filter((draw) => draw.color === colors.default.fill);
+      expect(bars).toHaveLength(11); // Empty auxiliary slots remain invisible.
+      const layouts = layoutArrays(workspace, 114, 107);
+      for (const [index, layout] of layouts.entries()) {
+        const expectedHeight = (layout.height - 7) / 2; // Reserve space for range lines.
+        const rendered = index === 0 ? bars.slice(0, 10) : bars.slice(10);
+        for (const bar of rendered) {
+          expect(bar.height).toBeCloseTo(expectedHeight);
+          expect(bar.y).toBeCloseTo(layout.y + expectedHeight);
+        }
+      }
+    }
+  } finally {
+    globalThis.window = originalWindow;
+  }
+});
+
 function workspaceWith(lengths) {
   const workspace = createWorkspace(Array(10).fill(1));
   lengths.forEach((length, idx) =>
