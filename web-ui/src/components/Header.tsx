@@ -1,14 +1,17 @@
 import { PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import { useSidebar } from "@/components/ui/sidebar";
+import { OperationStats } from "@/components/OperationStats";
+import type { OperationCounts } from "@/types/operation-counts";
 
-export function Header() {
+export function Header({ counts }: { counts: OperationCounts }) {
   const { isMobile, open, openMobile, toggleSidebar } = useSidebar();
   const expanded = isMobile ? openMobile : open;
   return (
-    <header className="flex h-10 shrink-0 items-center justify-between gap-3 border-b bg-card px-3">
+    <header className="grid min-h-10 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-1 border-b bg-card px-3 py-1 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
       <h1 className="text-lg font-semibold tracking-tight">SortForge</h1>
-      <div className="flex items-center gap-1">
+      <OperationStats counts={counts} />
+      <div className="col-start-2 row-start-1 flex items-center gap-1 sm:col-start-3">
         <ActionButton
           label="GitHub"
           variant="ghost"

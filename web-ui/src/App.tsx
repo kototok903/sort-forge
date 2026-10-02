@@ -35,6 +35,7 @@ import { THEMES, applyTheme } from "@/themes/themes";
 import { useSettings } from "@/settings/useSettings";
 import type { SoundWaveform } from "@/sound/types";
 import { createWorkspace } from "@/workspace/reducer";
+import { emptyOperationCounts } from "@/types/operation-counts";
 
 function generateArray(size: number, distribution: Distribution): number[] {
   switch (distribution) {
@@ -91,6 +92,7 @@ function App() {
     speed: SPEED_DEFAULT,
     workspace: createWorkspace([]),
     completedCount: 0,
+    operationCounts: emptyOperationCounts(),
   });
 
   // Loading state
@@ -391,7 +393,7 @@ function App() {
         onClick={() => controller.resumeSound()}
       >
         {/* Header */}
-        <Header />
+        <Header counts={controllerState.operationCounts} />
         {generationError && (
           <Alert variant="destructive">
             <AlertTitle>Generation failed</AlertTitle>

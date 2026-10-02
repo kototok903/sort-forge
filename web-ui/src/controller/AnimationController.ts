@@ -4,6 +4,11 @@ import type { Highlight, RenderState, IRenderer } from "@/renderer/types";
 import { applyWorkspaceEvent, createWorkspace } from "@/workspace/reducer";
 import type { WorkspaceState } from "@/workspace/types";
 import {
+  applyOperationCounts,
+  emptyOperationCounts,
+  type OperationCounts,
+} from "@/types/operation-counts";
+import {
   BASE_EVENTS_PER_SECOND,
   COMPLETION_EVENTS_PER_SECOND,
   SPEED_DEFAULT,
@@ -24,6 +29,7 @@ export interface ControllerState {
   speed: number;
   workspace: WorkspaceState;
   completedCount: number;
+  operationCounts: OperationCounts;
 }
 
 type StateListener = (state: ControllerState) => void;
@@ -38,6 +44,7 @@ export class AnimationController {
   // Workspace state
   private initialArray: number[] = [];
   private workspace: WorkspaceState = createWorkspace([]);
+  private operationCounts: OperationCounts = emptyOperationCounts();
   private minValue = 0;
   private maxValue = 1;
 
@@ -197,9 +204,7 @@ export class AnimationController {
     this.resumeSound();
     this.resetPlaybackTiming();
     this.soundEngine.playEvent(event, this.workspace, "backward");
-    if (event.type !== "CompleteElement") {
-      applyWorkspaceEvent(this.workspace, event, "backward");
-    }
+    this.applySortEvent(event, "backward");
     this.currentStep = targetStep;
     this.applyVisualStateForStep(this.currentStep);
     this.seekEngine();
@@ -224,7 +229,7 @@ export class AnimationController {
     for (let i = 0; i < Math.min(targetStep, this.sortSteps ?? 0); i++) {
       const event = this.engine.getEventAt(i);
       if (event) {
-        applyWorkspaceEvent(this.workspace, event);
+        this.applySortEvent(event);
       }
     }
 
@@ -275,6 +280,7 @@ export class AnimationController {
       speed: this.speed,
       workspace: this.workspace,
       completedCount: this.getCompletedCount(),
+      operationCounts: { ...this.operationCounts },
     };
   }
 
@@ -420,9 +426,7 @@ export class AnimationController {
               "forward",
               firstEventTime + i * msPerEvent
             );
-            if (event.type !== "CompleteElement") {
-              applyWorkspaceEvent(this.workspace, event);
-            }
+            this.applySortEvent(event);
             this.currentStep++;
             lastEvent = event;
           }
@@ -451,9 +455,7 @@ export class AnimationController {
               "backward",
               firstEventTime + i * msPerEvent
             );
-            if (event.type !== "CompleteElement") {
-              applyWorkspaceEvent(this.workspace, event, "backward");
-            }
+            this.applySortEvent(event, "backward");
             this.currentStep = targetStep;
             appliedBackward = true;
           }
@@ -496,10 +498,17 @@ export class AnimationController {
 
   private applyEvent(event: PlaybackEvent): void {
     this.soundEngine.playEvent(event, this.workspace);
-    if (event.type !== "CompleteElement") {
-      applyWorkspaceEvent(this.workspace, event);
-    }
+    this.applySortEvent(event);
     this.applyVisualState(event);
+  }
+
+  private applySortEvent(
+    event: PlaybackEvent,
+    direction: PlaybackDirection = "forward"
+  ): void {
+    if (event.type === "CompleteElement") return;
+    applyWorkspaceEvent(this.workspace, event, direction);
+    applyOperationCounts(this.operationCounts, event, direction);
   }
 
   private applyVisualState(event: PlaybackEvent): void {
@@ -568,6 +577,7 @@ export class AnimationController {
 
   private resetWorkspaceState(array: number[]): void {
     this.workspace = createWorkspace(array);
+    this.operationCounts = emptyOperationCounts();
     this.highlights = [];
   }
 
