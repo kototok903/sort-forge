@@ -4,6 +4,16 @@ import type {
 } from "@/controller/AnimationController";
 import { SPEED_MAX, SPEED_MIN, SPEED_STEP } from "@/config";
 import { getPlatformSymbols } from "@/utils";
+import {
+  PauseIcon,
+  PlayIcon,
+  RotateCcwIcon,
+  StepBackIcon,
+  StepForwardIcon,
+} from "lucide-react";
+import { ActionButton } from "@/components/ActionButton";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Slider } from "@/components/ui/slider";
 
 interface ControlsProps {
   playbackState: PlaybackState;
@@ -54,111 +64,119 @@ export function Controls({
   const canStepBackward = currentStep > 0;
 
   return (
-    <footer className="footer flex items-center gap-4 px-3">
-      {/* Playback buttons */}
-      <div className="flex items-center gap-1">
-        <button
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-3 border-t bg-card px-3 py-2 sm:min-h-12">
+      <div
+        role="group"
+        aria-label="Playback controls"
+        className="flex items-center gap-1"
+      >
+        <ActionButton
+          label="Reset"
+          shortcut="R"
+          variant="ghost"
+          size="icon-sm"
+          motion="instant"
           onClick={onReset}
-          className="btn btn-ghost btn-icon"
-          title="Reset (R)"
-          aria-label="Reset"
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M4 2v12l10-6z" transform="rotate(180 8 8)" />
-            <rect x="2" y="3" width="2" height="10" />
-          </svg>
-        </button>
-
-        <button
-          onClick={onStepBackward}
+          <RotateCcwIcon data-icon="inline-start" />
+        </ActionButton>
+        <ActionButton
+          label="Step backward"
+          shortcut="←"
+          variant="ghost"
+          size="icon-sm"
+          motion="instant"
           disabled={!canStepBackward}
-          className="btn btn-ghost btn-icon"
-          title="Step back (←)"
-          aria-label="Step backward"
+          onClick={onStepBackward}
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M10 2v12L2 8z" />
-            <rect x="12" y="3" width="2" height="10" />
-          </svg>
-        </button>
-
-        {/* Play Backward button */}
-        <button
-          onClick={isPlayingBackward ? onPause : onPlayBackward}
+          <StepBackIcon data-icon="inline-start" />
+        </ActionButton>
+        <ActionButton
+          label={isPlayingBackward ? "Pause" : "Play backward"}
+          shortcut={`${getPlatformSymbols().shift}+Space`}
+          variant={isPlayingBackward ? "default" : "ghost"}
+          size="icon-sm"
+          motion="instant"
           disabled={!canPlayBackward && !isPlayingBackward}
-          className={`btn btn-icon ${isPlayingBackward ? "btn-active" : "btn-ghost"}`}
-          title={`Play backward (${getPlatformSymbols().shift}+Space)`}
-          aria-label={isPlayingBackward ? "Pause" : "Play backward"}
+          onClick={isPlayingBackward ? onPause : onPlayBackward}
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M12 2v12L4 8z" />
-          </svg>
-        </button>
-
-        {/* Play Forward button */}
-        <button
-          onClick={isPlayingForward ? onPause : onPlayForward}
+          {isPlayingBackward ? (
+            <PauseIcon data-icon="inline-start" />
+          ) : (
+            <PlayIcon data-icon="inline-start" className="rotate-180" />
+          )}
+        </ActionButton>
+        <ActionButton
+          label={isPlayingForward ? "Pause" : "Play forward"}
+          shortcut="Space"
+          variant={isPlayingForward ? "default" : "ghost"}
+          size="icon-sm"
+          motion="instant"
           disabled={!canPlayForward && !isPlayingForward}
-          className={`btn btn-icon ${isPlayingForward ? "btn-active" : "btn-ghost"}`}
-          title="Play forward (Space)"
-          aria-label={isPlayingForward ? "Pause" : "Play forward"}
+          onClick={isPlayingForward ? onPause : onPlayForward}
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M4 2v12l8-6z" />
-          </svg>
-        </button>
-
-        <button
-          onClick={onStepForward}
+          {isPlayingForward ? (
+            <PauseIcon data-icon="inline-start" />
+          ) : (
+            <PlayIcon data-icon="inline-start" />
+          )}
+        </ActionButton>
+        <ActionButton
+          label="Step forward"
+          shortcut="→"
+          variant="ghost"
+          size="icon-sm"
+          motion="instant"
           disabled={!canStepForward}
-          className="btn btn-ghost btn-icon"
-          title="Step forward (→)"
-          aria-label="Step forward"
+          onClick={onStepForward}
         >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M6 2v12l8-6z" />
-            <rect x="2" y="3" width="2" height="10" />
-          </svg>
-        </button>
+          <StepForwardIcon data-icon="inline-start" />
+        </ActionButton>
       </div>
 
-      {/* Timeline */}
       {canSeek && (
-        <div className="flex-1 flex items-center gap-3">
-          <input
-            type="range"
-            min={0}
-            max={totalSteps}
+        <div className="order-last flex w-full min-w-0 items-center gap-3 sm:order-0 sm:w-auto sm:flex-1">
+          <Slider
             value={currentStep}
-            onChange={(e) => onSeek(parseInt(e.target.value, 10))}
-            className="slider slider-timeline flex-1"
+            min={0}
+            max={Math.max(1, totalSteps)}
+            step={1}
+            disabled={totalSteps === 0}
+            onValueChange={(value) => onSeek(value as number)}
             aria-label="Timeline"
+            getAriaValueText={(_, value) => `Step ${value} of ${totalSteps}`}
+            className="min-w-16 flex-1"
           />
-          <span className="mono text-sm text-secondary min-w-[12ch] text-right">
-            <span className="text-primary">{currentStep}</span>
-            <span className="text-muted"> / </span>
-            <span>{totalSteps}</span>
-          </span>
+          <output
+            className="min-w-[12ch] text-right font-mono text-sm text-muted-foreground"
+            aria-label="Playback step"
+          >
+            <span className="text-foreground">{currentStep}</span> /{" "}
+            {totalSteps}
+          </output>
         </div>
       )}
 
-      {/* Speed */}
-      <div className="flex items-center gap-2">
-        <span className="label">Speed</span>
-        <input
-          type="range"
-          min={SPEED_MIN}
-          max={SPEED_MAX}
-          step={SPEED_STEP}
-          value={speed}
-          onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
-          className="slider w-30"
-          aria-label="Speed"
-        />
-        <span className="mono text-sm text-primary min-w-[5ch] text-right">
+      <Field orientation="horizontal" className="ml-auto w-auto gap-2">
+        <FieldLabel id="speed-label">Speed</FieldLabel>
+        <div className="w-20 shrink-0 sm:w-30">
+          <Slider
+            value={speed}
+            min={SPEED_MIN}
+            max={SPEED_MAX}
+            step={SPEED_STEP}
+            onValueChange={(value) => onSpeedChange(value as number)}
+            aria-labelledby="speed-label"
+            getAriaValueText={(_, value) => `${value.toFixed(1)} times speed`}
+          />
+        </div>
+        <output
+          className="min-w-[5ch] text-right font-mono text-sm"
+          aria-label="Playback speed"
+        >
           {speed.toFixed(1)}x
-        </span>
-      </div>
+        </output>
+      </Field>
     </footer>
   );
 }

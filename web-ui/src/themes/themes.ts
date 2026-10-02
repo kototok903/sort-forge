@@ -322,23 +322,33 @@ export const THEMES: Record<ThemeId, Theme> = {
  */
 export function applyTheme(theme: Theme): void {
   const root = document.documentElement;
+  const { bg, text, border, accent } = theme.ui;
+  const isLight = theme.id === "lagoon";
+  root.classList.toggle("dark", !isLight);
+  root.dataset.theme = theme.id;
+  root.style.colorScheme = isLight ? "light" : "dark";
 
-  // Backgrounds
-  root.style.setProperty("--bg-base", theme.ui.bg.base);
-  root.style.setProperty("--bg-surface", theme.ui.bg.surface);
-  root.style.setProperty("--bg-elevated", theme.ui.bg.elevated);
-  root.style.setProperty("--bg-overlay", theme.ui.bg.overlay);
-
-  // Borders
-  root.style.setProperty("--border-subtle", theme.ui.border.subtle);
-  root.style.setProperty("--border-muted", theme.ui.border.muted);
-
-  // Text
-  root.style.setProperty("--text-primary", theme.ui.text.primary);
-  root.style.setProperty("--text-secondary", theme.ui.text.secondary);
-  root.style.setProperty("--text-muted", theme.ui.text.muted);
-
-  // Accent
-  root.style.setProperty("--accent", theme.ui.accent.base);
-  root.style.setProperty("--accent-hover", theme.ui.accent.hover);
+  const tokens = {
+    background: bg.base,
+    foreground: text.primary,
+    card: bg.surface,
+    "card-foreground": text.primary,
+    popover: bg.overlay,
+    "popover-foreground": text.primary,
+    primary: isLight ? accent.hover : accent.base,
+    "primary-foreground": isLight ? "#ffffff" : bg.base,
+    secondary: bg.elevated,
+    "secondary-foreground": text.primary,
+    muted: bg.elevated,
+    "muted-foreground": text.secondary,
+    accent: bg.elevated,
+    "accent-foreground": text.primary,
+    destructive: isLight ? "#b91c1c" : "#f87171",
+    border: border.subtle,
+    input: border.muted,
+    ring: accent.base,
+  };
+  for (const [name, value] of Object.entries(tokens)) {
+    root.style.setProperty(`--${name}`, value);
+  }
 }

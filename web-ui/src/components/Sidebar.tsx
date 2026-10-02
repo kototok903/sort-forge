@@ -13,8 +13,40 @@ import {
   type SoundWaveform,
 } from "@/sound/types";
 
+import { useState } from "react";
+import { XIcon } from "lucide-react";
+import { ActionButton } from "@/components/ActionButton";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldSet,
+  FieldLegend,
+  FieldError,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
+import { Spinner } from "@/components/ui/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Sidebar as SidebarPrimitive,
+  SidebarContent,
+  SidebarGroup,
+  SidebarHeader,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { playbackFinalFocus } from "@/hooks/use-pointer-focus";
+
 interface SidebarProps {
-  isOpen: boolean;
   engineType: EngineType;
   algorithms: string[];
   selectedAlgorithm: string;
@@ -34,11 +66,7 @@ interface SidebarProps {
   disabled?: boolean;
 }
 
-/**
- * Collapsible sidebar with settings grouped by section.
- */
 export function Sidebar({
-  isOpen,
   engineType,
   algorithms,
   selectedAlgorithm,
@@ -57,187 +85,293 @@ export function Sidebar({
   onGenerate,
   disabled = false,
 }: SidebarProps) {
+  const { setOpenMobile } = useSidebar();
   const isPregen = engineType === "pregen";
   const sizeMin = isPregen ? PREGEN_ARRAY_SIZE_MIN : LIVE_ARRAY_SIZE_MIN;
   const sizeMax = isPregen ? PREGEN_ARRAY_SIZE_MAX : LIVE_ARRAY_SIZE_MAX;
 
   return (
-    <aside className={`sidebar flex flex-col ${isOpen ? "" : "collapsed"}`}>
-      {/* Top group - Engine and Array sections */}
-      <div className="flex-1">
-        {/* Engine Section */}
-        <div className="section-header">Engine</div>
-
-        <div className="flex flex-col gap-2 mb-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="engine"
-              checked={engineType === "pregen"}
-              onChange={() => onEngineTypeChange("pregen")}
-              disabled={disabled}
-              className="radio"
-            />
-            <span className="text-sm text-primary">Pregen (V1)</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="engine"
-              checked={engineType === "live"}
-              onChange={() => onEngineTypeChange("live")}
-              disabled={disabled}
-              className="radio"
-            />
-            <span className="text-sm text-primary">Live (V2)</span>
-          </label>
+    <SidebarPrimitive
+      side="right"
+      position="inline"
+      mobileFinalFocus={playbackFinalFocus}
+    >
+      <SidebarHeader className="md:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold">Settings</h2>
+          <ActionButton
+            label="Close settings"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setOpenMobile(false)}
+          >
+            <XIcon data-icon="inline-start" />
+          </ActionButton>
         </div>
-
-        {/* Array Section */}
-        <div className="section-header">Array</div>
-
-        <div className="flex flex-col gap-3">
-          {/* Algorithm */}
-          <div className="form-group">
-            <label className="label">Algorithm</label>
-            <select
-              value={selectedAlgorithm}
-              onChange={(e) => onAlgorithmChange(e.target.value)}
+      </SidebarHeader>
+      <SidebarContent id="sort-settings" className="gap-4 p-3">
+        <SidebarGroup className="p-0">
+          <FieldSet className="gap-3" disabled={disabled}>
+            <FieldLegend variant="label">Engine</FieldLegend>
+            <ToggleGroup
+              aria-label="Engine"
+              variant="outline"
+              size="sm"
+              spacing={0}
+              value={[engineType]}
               disabled={disabled}
-              className="select w-full"
+              onValueChange={(values) => {
+                if (values[0]) onEngineTypeChange(values[0] as EngineType);
+              }}
+              className="w-full"
             >
-              {algorithms.map((algo) => (
-                <option key={algo} value={algo}>
-                  {formatAlgorithmName(algo)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Size - different controls for each engine */}
-          <div className="form-group">
-            <div className="flex items-center justify-between">
-              <label className="label">Size</label>
-              {isPregen && (
-                <span className="mono text-sm text-primary">{arraySize}</span>
+              <ToggleGroupItem value="pregen" className="flex-1">
+                Pregen (V1)
+              </ToggleGroupItem>
+              <ToggleGroupItem value="live" className="flex-1">
+                Live (V2)
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </FieldSet>
+        </SidebarGroup>
+        <Separator />
+        <SidebarGroup className="p-0">
+          <FieldSet className="gap-3" disabled={disabled}>
+            <FieldLegend variant="label">Array</FieldLegend>
+            <FieldGroup className="gap-3">
+              <Field data-disabled={disabled}>
+                <FieldLabel htmlFor="algorithm">Algorithm</FieldLabel>
+                <SettingSelect
+                  id="algorithm"
+                  value={selectedAlgorithm}
+                  items={algorithms.map((value) => ({
+                    value,
+                    label: formatAlgorithmName(value),
+                  }))}
+                  onValueChange={onAlgorithmChange}
+                  disabled={disabled}
+                />
+              </Field>
+              {isPregen ? (
+                <Field data-disabled={disabled}>
+                  <div className="flex items-center justify-between gap-2">
+                    <FieldLabel id="size-label">Size</FieldLabel>
+                    <output className="font-mono text-sm">{arraySize}</output>
+                  </div>
+                  <Slider
+                    min={sizeMin}
+                    max={sizeMax}
+                    value={arraySize}
+                    step={1}
+                    onValueChange={(value) =>
+                      onArraySizeChange(value as number)
+                    }
+                    disabled={disabled}
+                    aria-labelledby="size-label"
+                    getAriaValueText={(_, value) => `${value} elements`}
+                  />
+                </Field>
+              ) : (
+                <ArraySizeInput
+                  key={arraySize}
+                  value={arraySize}
+                  min={sizeMin}
+                  max={sizeMax}
+                  onChange={onArraySizeChange}
+                  disabled={disabled}
+                />
               )}
-            </div>
-            {isPregen ? (
-              <input
-                type="range"
-                min={sizeMin}
-                max={sizeMax}
-                value={arraySize}
-                onChange={(e) =>
-                  onArraySizeChange(parseInt(e.target.value, 10))
-                }
+              <Field data-disabled={disabled}>
+                <FieldLabel id="distribution-label">Distribution</FieldLabel>
+                <ToggleGroup
+                  aria-labelledby="distribution-label"
+                  variant="outline"
+                  size="sm"
+                  spacing={0}
+                  value={[distribution]}
+                  disabled={disabled}
+                  onValueChange={(values) => {
+                    if (values[0])
+                      onDistributionChange(values[0] as Distribution);
+                  }}
+                  className="w-full"
+                >
+                  <ToggleGroupItem value="random" className="flex-1">
+                    Random
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="uniform" className="flex-1">
+                    Uniform
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </Field>
+              <ActionButton
+                label="Generate new array"
+                shortcut="G"
+                size="sm"
+                onClick={onGenerate}
                 disabled={disabled}
-                className="slider"
-              />
-            ) : (
-              <input
-                type="number"
-                min={sizeMin}
-                max={sizeMax}
-                value={arraySize}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (!isNaN(val) && val >= sizeMin && val <= sizeMax) {
-                    onArraySizeChange(val);
+                aria-label="Generate new array"
+                aria-busy={disabled}
+              >
+                {disabled && <Spinner data-icon="inline-start" />}
+                {disabled ? "Generating…" : "Generate"}
+              </ActionButton>
+            </FieldGroup>
+          </FieldSet>
+        </SidebarGroup>
+        <SidebarGroup className="mt-auto p-0 pt-4">
+          <FieldSet className="gap-3">
+            <FieldLegend variant="label">Customization</FieldLegend>
+            <Separator />
+            <FieldGroup className="gap-3">
+              <Field>
+                <FieldLabel htmlFor="theme">Theme</FieldLabel>
+                <SettingSelect
+                  id="theme"
+                  value={themeId}
+                  items={THEME_IDS.map((value) => ({
+                    value,
+                    label: THEMES[value].name,
+                  }))}
+                  onValueChange={onThemeChange}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="sound">Sound</FieldLabel>
+                <SettingSelect
+                  id="sound"
+                  value={soundWaveform}
+                  items={SOUND_WAVEFORMS.map((value) => ({
+                    value,
+                    label: SOUND_WAVEFORM_LABELS[value],
+                  }))}
+                  onValueChange={onSoundWaveformChange}
+                />
+              </Field>
+              <Field data-disabled={soundWaveform === "none"}>
+                <div className="flex items-center justify-between gap-2">
+                  <FieldLabel id="volume-label">Volume</FieldLabel>
+                  <output className="font-mono text-sm">
+                    {Math.round(soundVolume * 100)}%
+                  </output>
+                </div>
+                <Slider
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(soundVolume * 100)}
+                  onValueChange={(value) =>
+                    onSoundVolumeChange((value as number) / 100)
                   }
-                }}
-                disabled={disabled}
-                className="input w-full"
-              />
-            )}
-          </div>
+                  disabled={soundWaveform === "none"}
+                  aria-labelledby="volume-label"
+                  getAriaValueText={(_, value) => `${value} percent`}
+                />
+              </Field>
+            </FieldGroup>
+          </FieldSet>
+        </SidebarGroup>
+      </SidebarContent>
+    </SidebarPrimitive>
+  );
+}
 
-          {/* Distribution */}
-          <div className="form-group">
-            <label className="label">Distribution</label>
-            <select
-              value={distribution}
-              onChange={(e) =>
-                onDistributionChange(e.target.value as Distribution)
-              }
-              disabled={disabled}
-              className="select w-full"
-            >
-              <option value="random">Random</option>
-              <option value="uniform">Uniform</option>
-            </select>
-          </div>
+function SettingSelect<T extends string>({
+  id,
+  value,
+  items,
+  disabled,
+  onValueChange,
+}: {
+  id: string;
+  value: T;
+  items: { value: T; label: string }[];
+  disabled?: boolean;
+  onValueChange: (value: T) => void;
+}) {
+  return (
+    <Select
+      items={items}
+      value={value}
+      disabled={disabled}
+      onValueChange={(next) => {
+        if (next !== null) onValueChange(next);
+      }}
+    >
+      <SelectTrigger id={id} size="sm" className="w-full">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent
+        alignItemWithTrigger={false}
+        align="start"
+        finalFocus={playbackFinalFocus}
+      >
+        <SelectGroup>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
 
-          {/* Generate Button */}
-          <button
-            onClick={onGenerate}
-            title="Generate new array (G)"
-            aria-label="Generate new array"
-            disabled={disabled}
-            className="btn btn-primary w-full mt-1"
-          >
-            Generate
-          </button>
-        </div>
-      </div>
-
-      {/* Bottom - Theme Section */}
-      <div className="pt-4">
-        <div className="section-header">Customization</div>
-        <div className="form-group">
-          <label className="label">Theme</label>
-          <select
-            value={themeId}
-            onChange={(e) => onThemeChange(e.target.value as ThemeId)}
-            className="select w-full"
-          >
-            {THEME_IDS.map((id) => (
-              <option key={id} value={id}>
-                {THEMES[id].name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Sound controls */}
-        <div className="form-group mt-3">
-          <label className="label">Sound</label>
-          <select
-            value={soundWaveform}
-            onChange={(e) =>
-              onSoundWaveformChange(e.target.value as SoundWaveform)
-            }
-            className="select w-full"
-          >
-            {SOUND_WAVEFORMS.map((wf) => (
-              <option key={wf} value={wf}>
-                {SOUND_WAVEFORM_LABELS[wf]}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group mt-2">
-          <div className="flex items-center justify-between">
-            <label className="label">Volume</label>
-            <span className="mono text-sm text-primary">
-              {Math.round(soundVolume * 100)}%
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={Math.round(soundVolume * 100)}
-            onChange={(e) =>
-              onSoundVolumeChange(parseInt(e.target.value, 10) / 100)
-            }
-            className="slider w-full"
-            disabled={soundWaveform === "none"}
-          />
-        </div>
-      </div>
-    </aside>
+/** Keep an editable draft so clearing or replacing the number works naturally. */
+function ArraySizeInput({
+  value,
+  min,
+  max,
+  disabled,
+  onChange,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  const number = Number(draft);
+  const invalid =
+    draft !== "" && (!Number.isInteger(number) || number < min || number > max);
+  const commit = () => {
+    if (draft === "" || invalid) {
+      setDraft(String(value));
+      return;
+    }
+    onChange(number);
+  };
+  return (
+    <Field data-invalid={invalid} data-disabled={disabled}>
+      <FieldLabel htmlFor="array-size">Size</FieldLabel>
+      <Input
+        id="array-size"
+        size="sm"
+        type="number"
+        min={min}
+        max={max}
+        step={1}
+        value={draft}
+        disabled={disabled}
+        aria-invalid={invalid}
+        aria-describedby={invalid ? "size-error" : undefined}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            commit();
+            event.currentTarget.blur();
+          }
+        }}
+      />
+      {invalid && (
+        <FieldError id="size-error">
+          Enter a whole number from {min} to {max}.
+        </FieldError>
+      )}
+    </Field>
   );
 }
 

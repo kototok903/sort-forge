@@ -25,7 +25,12 @@ import {
   RANDOM_VALUE_MIN,
   SPEED_DEFAULT,
 } from "@/config";
-import { getIsModKey } from "@/utils";
+import { shouldHandlePlaybackShortcut } from "@/lib/shortcuts";
+import { usePointerFocus } from "@/hooks/use-pointer-focus";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { THEMES, applyTheme } from "@/themes/themes";
 import { useSettings } from "@/settings/useSettings";
 import type { SoundWaveform } from "@/sound/types";
@@ -53,6 +58,7 @@ function generateArray(size: number, distribution: Distribution): number[] {
 }
 
 function App() {
+  usePointerFocus();
   // Wasm initialization state
   const [wasmReady, setWasmReady] = useState(false);
   const [wasmError, setWasmError] = useState<string | null>(null);
@@ -89,6 +95,7 @@ function App() {
 
   // Loading state
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   // Create stable instances of renderer and controller
   const renderer = useMemo(() => new CanvasRenderer(), []);
@@ -239,13 +246,16 @@ function App() {
     if (!wasmReady || isGenerating) return;
 
     setIsGenerating(true);
+    setGenerationError(null);
     try {
       const array = generateArray(arraySize, settings.distribution);
       const engine =
         engineType === "pregen" ? new PregenEngine() : new LiveEngine();
       await controller.initialize(engine, selectedAlgorithm, array);
     } catch (err) {
-      console.error("Failed to initialize sort:", err);
+      setGenerationError(
+        err instanceof Error ? err.message : "Failed to generate array"
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -284,21 +294,21 @@ function App() {
   );
   const handleReset = useCallback(() => controller.reset(), [controller]);
 
-  // Toggle sidebar
-  const handleToggleSidebar = useCallback(() => {
-    setSettings({ sidebarOpen: !settings.sidebarOpen });
-  }, [settings.sidebarOpen, setSettings]);
+  const handleSidebarOpenChange = useCallback(
+    (open: boolean) => {
+      setSettings({ sidebarOpen: open });
+    },
+    [setSettings]
+  );
+  const handleCanvasResize = useCallback(
+    () => controller.forceRender(),
+    [controller]
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLSelectElement
-      ) {
-        return;
-      }
+      if (!shouldHandlePlaybackShortcut(e)) return;
 
       switch (e.code) {
         case "Space":
@@ -320,10 +330,8 @@ function App() {
           controller.stepBackward();
           break;
         case "KeyR":
-          if (!getIsModKey(e)) {
-            e.preventDefault();
-            controller.reset();
-          }
+          e.preventDefault();
+          controller.reset();
           break;
         case "Equal":
         case "NumpadAdd":
@@ -354,75 +362,91 @@ function App() {
   // Show loading state
   if (!wasmReady) {
     return (
-      <div className="h-screen flex items-center justify-center bg-base">
+      <div className="flex h-dvh items-center justify-center bg-background p-4">
         {wasmError ? (
-          <div className="text-error">Error: {wasmError}</div>
+          <Alert variant="destructive" className="max-w-md">
+            <AlertTitle>Unable to load SortForge</AlertTitle>
+            <AlertDescription>{wasmError}</AlertDescription>
+          </Alert>
         ) : (
-          <div className="text-muted">Initializing...</div>
+          <div
+            role="status"
+            className="flex items-center gap-2 text-muted-foreground"
+          >
+            <Spinner aria-hidden="true" />
+            Initializing…
+          </div>
         )}
       </div>
     );
   }
 
   return (
-    <div
-      className="h-screen flex flex-col bg-base"
-      onClick={() => controller.resumeSound()}
-    >
-      {/* Header */}
-      <Header
-        sidebarOpen={settings.sidebarOpen}
-        onToggleSidebar={handleToggleSidebar}
-      />
+    <TooltipProvider delay={400}>
+      <SidebarProvider
+        open={settings.sidebarOpen}
+        onOpenChange={handleSidebarOpenChange}
+        style={{ "--sidebar-width": "15rem" } as React.CSSProperties}
+        className="h-dvh min-h-0 flex-col overflow-hidden bg-background"
+        onClick={() => controller.resumeSound()}
+      >
+        {/* Header */}
+        <Header />
+        {generationError && (
+          <Alert variant="destructive">
+            <AlertTitle>Generation failed</AlertTitle>
+            <AlertDescription>{generationError}</AlertDescription>
+          </Alert>
+        )}
 
-      {/* Main content area */}
-      <div className="flex-1 flex min-h-0">
-        {/* Canvas */}
-        <div className="flex-1 min-w-0">
-          <Canvas renderer={renderer} />
+        {/* Main content area */}
+        <div className="flex-1 flex min-h-0">
+          {/* Canvas */}
+          <main className="flex-1 min-w-0">
+            <Canvas renderer={renderer} onResize={handleCanvasResize} />
+          </main>
+
+          {/* Sidebar */}
+          <Sidebar
+            engineType={engineType}
+            algorithms={algorithms}
+            selectedAlgorithm={selectedAlgorithm}
+            distribution={settings.distribution}
+            arraySize={arraySize}
+            themeId={settings.themeId}
+            soundWaveform={settings.soundWaveform}
+            soundVolume={settings.soundVolume}
+            onEngineTypeChange={handleEngineTypeChange}
+            onAlgorithmChange={handleAlgorithmChange}
+            onDistributionChange={handleDistributionChange}
+            onArraySizeChange={handleArraySizeChange}
+            onThemeChange={handleThemeChange}
+            onSoundWaveformChange={handleSoundWaveformChange}
+            onSoundVolumeChange={handleSoundVolumeChange}
+            onGenerate={handleGenerate}
+            disabled={isGenerating}
+          />
         </div>
 
-        {/* Sidebar */}
-        <Sidebar
-          isOpen={settings.sidebarOpen}
-          engineType={engineType}
-          algorithms={algorithms}
-          selectedAlgorithm={selectedAlgorithm}
-          distribution={settings.distribution}
-          arraySize={arraySize}
-          themeId={settings.themeId}
-          soundWaveform={settings.soundWaveform}
-          soundVolume={settings.soundVolume}
-          onEngineTypeChange={handleEngineTypeChange}
-          onAlgorithmChange={handleAlgorithmChange}
-          onDistributionChange={handleDistributionChange}
-          onArraySizeChange={handleArraySizeChange}
-          onThemeChange={handleThemeChange}
-          onSoundWaveformChange={handleSoundWaveformChange}
-          onSoundVolumeChange={handleSoundVolumeChange}
-          onGenerate={handleGenerate}
-          disabled={isGenerating}
+        {/* Footer controls */}
+        <Controls
+          playbackState={controllerState.playbackState}
+          direction={controllerState.direction}
+          currentStep={controllerState.currentStep}
+          totalSteps={controllerState.totalSteps}
+          speed={controllerState.speed}
+          canSeek={engineType === "pregen"}
+          onPlayForward={handlePlay}
+          onPlayBackward={handlePlayBackward}
+          onPause={handlePause}
+          onStepForward={handleStepForward}
+          onStepBackward={handleStepBackward}
+          onSeek={handleSeek}
+          onSpeedChange={handleSpeedChange}
+          onReset={handleReset}
         />
-      </div>
-
-      {/* Footer controls */}
-      <Controls
-        playbackState={controllerState.playbackState}
-        direction={controllerState.direction}
-        currentStep={controllerState.currentStep}
-        totalSteps={controllerState.totalSteps}
-        speed={controllerState.speed}
-        canSeek={engineType === "pregen"}
-        onPlayForward={handlePlay}
-        onPlayBackward={handlePlayBackward}
-        onPause={handlePause}
-        onStepForward={handleStepForward}
-        onStepBackward={handleStepBackward}
-        onSeek={handleSeek}
-        onSpeedChange={handleSpeedChange}
-        onReset={handleReset}
-      />
-    </div>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
 
