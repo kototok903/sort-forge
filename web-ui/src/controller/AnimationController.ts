@@ -27,6 +27,7 @@ export interface ControllerState {
   currentStep: number;
   totalSteps: number;
   speed: number;
+  canSeek: boolean;
   workspace: WorkspaceState;
   completedCount: number;
   operationCounts: OperationCounts;
@@ -278,6 +279,7 @@ export class AnimationController {
       currentStep: this.currentStep,
       totalSteps: this.totalSteps,
       speed: this.speed,
+      canSeek: this.engine?.canSeek ?? false,
       workspace: this.workspace,
       completedCount: this.getCompletedCount(),
       operationCounts: { ...this.operationCounts },

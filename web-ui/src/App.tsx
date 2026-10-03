@@ -70,6 +70,7 @@ function App() {
     currentStep: 0,
     totalSteps: 0,
     speed: SPEED_DEFAULT,
+    canSeek: false,
     workspace: createWorkspace([]),
     completedCount: 0,
     operationCounts: emptyOperationCounts(),
@@ -460,7 +461,7 @@ function App() {
           currentStep={controllerState.currentStep}
           totalSteps={controllerState.totalSteps}
           speed={controllerState.speed}
-          canSeek={engineType === "pregen"}
+          canSeek={controllerState.canSeek}
           onPlayForward={handlePlay}
           onPlayBackward={handlePlayBackward}
           onPause={handlePause}

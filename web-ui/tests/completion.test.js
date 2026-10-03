@@ -36,6 +36,22 @@ function fixtureEngine(canSeek) {
 }
 
 describe("completion sweep", () => {
+  test("seek capability follows the initialized engine when regenerating", async () => {
+    const controller = new AnimationController();
+    let state;
+    controller.subscribe((next) => {
+      state = next;
+    });
+    expect(controller.getState().canSeek).toBe(false);
+    for (const canSeek of [true, false, true]) {
+      await controller.initialize(fixtureEngine(canSeek), "fixture", [3, 2, 1]);
+      expect(state.canSeek).toBe(canSeek);
+      controller.stepForward();
+      controller.reset();
+      expect(state.canSeek).toBe(canSeek);
+    }
+  });
+
   for (const canSeek of [true, false]) {
     test(`${canSeek ? "pregen" : "live"}: completion, rewind, replay, and reset preserve sorted values`, async () => {
       const engine = fixtureEngine(canSeek);
