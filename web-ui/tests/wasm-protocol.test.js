@@ -5,9 +5,11 @@ import { PregenEngine } from "@/engines/PregenEngine";
 import { LiveEngine } from "@/engines/LiveEngine";
 import {
   get_available_algorithms,
+  get_pregen_algorithm_metadata,
   get_live_algorithms,
   initSync,
   pregen_sort_with_result,
+  pregen_sort,
 } from "../../rust-core/pkg/sort_forge_core.js";
 
 // Build rust-core with wasm-pack before running this integration suite.
@@ -81,6 +83,25 @@ function checkProtocol(events, length) {
 }
 
 const inputs = [[], [0], [5, 3, 5, 1, 0, 2], [5, 4, 3, 2, 1], [0, 1, 2, 3, 4]];
+
+test("pregen metadata and both generation APIs enforce algorithm limits", () => {
+  const metadata = get_pregen_algorithm_metadata();
+  expect(metadata.map(({ id }) => id)).toEqual(get_available_algorithms());
+  expect(metadata.find(({ id }) => id === "stooge")).toEqual({
+    id: "stooge",
+    maxArraySize: 32,
+  });
+  expect(metadata.find(({ id }) => id === "bubble").maxArraySize).toBeNull();
+  for (const generate of [pregen_sort, pregen_sort_with_result]) {
+    for (const alias of ["stooge", "StoogeSort", "stooge_sort"]) {
+      expect(() => generate(alias, Array(33).fill(1))).toThrow(
+        "stooge supports at most 32 elements (received 33)"
+      );
+      expect(() => generate(alias, Array(32).fill(1))).not.toThrow();
+    }
+    expect(() => generate("bubble", Array(33).fill(1))).not.toThrow();
+  }
+});
 
 describe("rebuilt Wasm protocol and controller compatibility", () => {
   for (const algorithm of get_available_algorithms()) {

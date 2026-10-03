@@ -1,5 +1,9 @@
 import type { ValueMode, ArrayOrder, EngineType } from "@/config";
 import {
+  getPregenArraySizeMax,
+  type PregenAlgorithmMetadata,
+} from "@/lib/algorithm-limits";
+import {
   PREGEN_ARRAY_SIZE_MIN,
   PREGEN_ARRAY_SIZE_MAX,
   PREGEN_ARRAY_SIZE_DEFAULT,
@@ -45,6 +49,7 @@ export interface Settings {
 export interface ValidationContext {
   pregenAlgorithms: string[];
   liveAlgorithms: string[];
+  pregenAlgorithmMetadata?: PregenAlgorithmMetadata[];
 }
 
 /**
@@ -174,6 +179,11 @@ function applyAlgorithmDefaults(
   if (!settings.liveAlgorithm && ctx.liveAlgorithms.length > 0) {
     settings.liveAlgorithm = ctx.liveAlgorithms[0];
   }
+  settings.pregenArraySize = clamp(
+    settings.pregenArraySize,
+    PREGEN_ARRAY_SIZE_MIN,
+    getPregenArraySizeMax(settings.pregenAlgorithm, ctx.pregenAlgorithmMetadata)
+  );
   return settings;
 }
 

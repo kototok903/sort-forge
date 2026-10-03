@@ -7,6 +7,10 @@ declare module "sort-forge-core" {
 
   /** Get list of available algorithms */
   export function get_available_algorithms(): string[];
+  export function get_pregen_algorithm_metadata(): {
+    id: string;
+    maxArraySize: number | null;
+  }[];
 
   /** Initialize panic hook for better error messages */
   export function init(): void;

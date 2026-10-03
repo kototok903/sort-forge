@@ -1,5 +1,6 @@
 import type { SortEvent } from "@/types/events";
 import type { ISortEngine } from "@/engines/types";
+import type { PregenAlgorithmMetadata } from "@/lib/algorithm-limits";
 
 // Wasm module - will be initialized lazily
 let wasmModule: typeof import("sort-forge-core") | null = null;
@@ -30,6 +31,13 @@ export function getAvailableAlgorithms(): string[] {
     throw new Error("Wasm module not initialized. Call initWasm() first.");
   }
   return wasmModule.get_available_algorithms() as string[];
+}
+
+export function getPregenAlgorithmMetadata(): PregenAlgorithmMetadata[] {
+  if (!wasmModule) {
+    throw new Error("Wasm module not initialized. Call initWasm() first.");
+  }
+  return wasmModule.get_pregen_algorithm_metadata() as PregenAlgorithmMetadata[];
 }
 
 /**

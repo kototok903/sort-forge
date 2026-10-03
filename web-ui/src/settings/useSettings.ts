@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   validateSettings,
   type Settings,
@@ -52,33 +52,20 @@ export function useSettings(ctx: ValidationContext) {
     [rawSettings, ctx]
   );
 
-  // Debounced save to localStorage
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setSettings = useCallback(
+    (update: Partial<Settings>) => {
+      setRawSettings((prev) =>
+        validateSettings({ ...validateSettings(prev, ctx), ...update }, ctx)
+      );
+    },
+    [ctx]
+  );
 
-  const setSettings = useCallback((update: Partial<Settings>) => {
-    setRawSettings((prev) => {
-      const next = { ...prev, ...update };
-
-      // Debounce save
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      saveTimeoutRef.current = setTimeout(() => {
-        saveToStorage(next);
-      }, SAVE_DEBOUNCE_MS);
-
-      return next;
-    });
-  }, []);
-
-  // Cleanup timeout on unmount
+  // Persist sanitized settings, including limits loaded from Wasm.
   useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
+    const timeout = setTimeout(() => saveToStorage(settings), SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [settings]);
 
   return { settings, setSettings };
 }

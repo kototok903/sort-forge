@@ -2,7 +2,6 @@ import type { ValueMode, ArrayOrder, EngineType } from "@/config";
 import {
   VALUE_MODE_OPTIONS,
   ARRAY_ORDER_OPTIONS,
-  PREGEN_ARRAY_SIZE_MAX,
   PREGEN_ARRAY_SIZE_MIN,
   LIVE_ARRAY_SIZE_MIN,
   LIVE_ARRAY_SIZE_MAX,
@@ -55,6 +54,7 @@ interface SidebarProps {
   valueMode: ValueMode;
   arrayOrder: ArrayOrder;
   arraySize: number;
+  pregenArraySizeMax: number;
   themeId: ThemeId;
   soundWaveform: SoundWaveform;
   soundVolume: number;
@@ -79,6 +79,7 @@ export function Sidebar({
   valueMode,
   arrayOrder,
   arraySize,
+  pregenArraySizeMax,
   themeId,
   soundWaveform,
   soundVolume,
@@ -98,7 +99,7 @@ export function Sidebar({
   const { setOpenMobile } = useSidebar();
   const isPregen = engineType === "pregen";
   const sizeMin = isPregen ? PREGEN_ARRAY_SIZE_MIN : LIVE_ARRAY_SIZE_MIN;
-  const sizeMax = isPregen ? PREGEN_ARRAY_SIZE_MAX : LIVE_ARRAY_SIZE_MAX;
+  const sizeMax = isPregen ? pregenArraySizeMax : LIVE_ARRAY_SIZE_MAX;
 
   return (
     <SidebarPrimitive

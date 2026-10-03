@@ -12,6 +12,7 @@ import {
   PregenEngine,
   initWasm,
   getAvailableAlgorithms,
+  getPregenAlgorithmMetadata,
 } from "@/engines/PregenEngine";
 import {
   LiveEngine,
@@ -27,6 +28,10 @@ import {
 import { generateArray } from "@/lib/array-generation";
 import { shouldHandlePlaybackShortcut } from "@/lib/shortcuts";
 import { adjustSpeed } from "@/lib/playback-speed";
+import {
+  getPregenArraySizeMax,
+  type PregenAlgorithmMetadata,
+} from "@/lib/algorithm-limits";
 import { usePointerFocus } from "@/hooks/use-pointer-focus";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -46,13 +51,17 @@ function App() {
 
   // Available algorithms (loaded from Wasm)
   const [pregenAlgorithms, setPregenAlgorithms] = useState<string[]>([]);
+  const [pregenAlgorithmMetadata, setPregenAlgorithmMetadata] = useState<
+    PregenAlgorithmMetadata[]
+  >([]);
   const [liveAlgorithms, setLiveAlgorithms] = useState<string[]>([]);
 
   // Persisted settings
-  const { settings, setSettings } = useSettings({
-    pregenAlgorithms,
-    liveAlgorithms,
-  });
+  const validationContext = useMemo(
+    () => ({ pregenAlgorithms, pregenAlgorithmMetadata, liveAlgorithms }),
+    [pregenAlgorithms, pregenAlgorithmMetadata, liveAlgorithms]
+  );
+  const { settings, setSettings } = useSettings(validationContext);
 
   // Derived state from settings
   const engineType = settings.engineType;
@@ -90,6 +99,7 @@ function App() {
       .then(() => {
         setWasmReady(true);
         setPregenAlgorithms(getAvailableAlgorithms());
+        setPregenAlgorithmMetadata(getPregenAlgorithmMetadata());
         setLiveAlgorithms(getAvailableLiveAlgorithms());
       })
       .catch((err) => {
@@ -436,6 +446,10 @@ function App() {
             valueMode={settings.valueMode}
             arrayOrder={settings.arrayOrder}
             arraySize={arraySize}
+            pregenArraySizeMax={getPregenArraySizeMax(
+              settings.pregenAlgorithm,
+              pregenAlgorithmMetadata
+            )}
             themeId={settings.themeId}
             soundWaveform={settings.soundWaveform}
             soundVolume={settings.soundVolume}
