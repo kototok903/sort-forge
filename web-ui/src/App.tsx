@@ -26,6 +26,7 @@ import {
 } from "@/config";
 import { generateArray } from "@/lib/array-generation";
 import { shouldHandlePlaybackShortcut } from "@/lib/shortcuts";
+import { adjustSpeed } from "@/lib/playback-speed";
 import { usePointerFocus } from "@/hooks/use-pointer-focus";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -347,15 +348,17 @@ function App() {
           e.preventDefault();
           controller.reset();
           break;
+        case "ArrowUp":
         case "Equal":
         case "NumpadAdd":
           e.preventDefault();
-          controller.setSpeed(Math.min(10, controllerState.speed + 0.5));
+          controller.setSpeed(adjustSpeed(controller.getState().speed, 1));
           break;
+        case "ArrowDown":
         case "Minus":
         case "NumpadSubtract":
           e.preventDefault();
-          controller.setSpeed(Math.max(0.1, controllerState.speed - 0.5));
+          controller.setSpeed(adjustSpeed(controller.getState().speed, -1));
           break;
         case "KeyM":
           e.preventDefault();
@@ -373,7 +376,6 @@ function App() {
   }, [
     controller,
     controllerState.playbackState,
-    controllerState.speed,
     handleGenerate,
     handleToggleMute,
   ]);

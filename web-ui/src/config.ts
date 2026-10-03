@@ -41,8 +41,9 @@ export const RANDOM_VALUE_MAX = 100;
 
 export const SPEED_DEFAULT = 1;
 export const SPEED_MIN = 0.1;
-export const SPEED_MAX = 10;
-export const SPEED_STEP = 0.1;
+export const SPEED_MAX = 100;
+// Twenty equal slider steps per decade (6 → 60 → 600 → 6,000 e/s).
+export const SPEED_SLIDER_STEPS = 60;
 
 export const BASE_EVENTS_PER_SECOND = 60;
 export const COMPLETION_EVENTS_PER_SECOND = 240;

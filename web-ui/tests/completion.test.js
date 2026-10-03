@@ -118,7 +118,7 @@ describe("completion sweep", () => {
       callback(now);
     };
     try {
-      for (const speed of [0.1, 10]) {
+      for (const speed of [0.1, 10, 100]) {
         const controller = new AnimationController();
         const array = Array.from({ length: 128 }, (_, idx) => idx);
         await controller.initialize(fixtureEngine(true), "fixture", array);

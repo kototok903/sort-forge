@@ -2,7 +2,12 @@ import type {
   PlaybackState,
   PlaybackDirection,
 } from "@/controller/AnimationController";
-import { SPEED_MAX, SPEED_MIN, SPEED_STEP } from "@/config";
+import { SPEED_SLIDER_STEPS } from "@/config";
+import {
+  sliderPositionToSpeed,
+  speedToEventsPerSecond,
+  speedToSliderPosition,
+} from "@/lib/playback-speed";
 import { getPlatformSymbols } from "@/utils";
 import {
   PauseIcon,
@@ -14,6 +19,12 @@ import {
 import { ActionButton } from "@/components/ActionButton";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Slider } from "@/components/ui/slider";
+import { Kbd } from "@/components/ui/kbd";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ControlsProps {
   playbackState: PlaybackState;
@@ -158,23 +169,43 @@ export function Controls({
       )}
 
       <Field orientation="horizontal" className="ml-auto w-auto gap-2">
-        <FieldLabel id="speed-label">Speed</FieldLabel>
+        <Tooltip>
+          <TooltipTrigger render={<FieldLabel id="speed-label" tabIndex={0} />}>
+            Speed
+          </TooltipTrigger>
+          <TooltipContent>
+            Increase <Kbd>↑</Kbd> / Decrease <Kbd>↓</Kbd>
+          </TooltipContent>
+        </Tooltip>
         <div className="w-20 shrink-0 sm:w-30">
           <Slider
-            value={speed}
-            min={SPEED_MIN}
-            max={SPEED_MAX}
-            step={SPEED_STEP}
-            onValueChange={(value) => onSpeedChange(value as number)}
+            value={speedToSliderPosition(speed)}
+            min={0}
+            max={SPEED_SLIDER_STEPS}
+            step={1}
+            onValueChange={(value) =>
+              onSpeedChange(sliderPositionToSpeed(value as number))
+            }
             aria-labelledby="speed-label"
-            getAriaValueText={(_, value) => `${value.toFixed(1)} times speed`}
+            aria-keyshortcuts="ArrowUp ArrowDown + -"
+            getAriaValueText={(_, value) =>
+              `${speedToEventsPerSecond(sliderPositionToSpeed(value))} events per second`
+            }
           />
         </div>
         <output
-          className="min-w-[5ch] text-right font-mono text-sm"
+          className="min-w-[8ch] whitespace-nowrap text-right font-mono text-sm"
           aria-label="Playback speed"
         >
-          {speed.toFixed(1)}x
+          {speedToEventsPerSecond(speed)}{" "}
+          <Tooltip>
+            <TooltipTrigger
+              render={<span tabIndex={0} className="text-muted-foreground" />}
+            >
+              e/s
+            </TooltipTrigger>
+            <TooltipContent>Events per second</TooltipContent>
+          </Tooltip>
         </output>
       </Field>
     </footer>
