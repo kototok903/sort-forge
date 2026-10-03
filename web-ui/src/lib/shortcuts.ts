@@ -44,8 +44,8 @@ export function shouldHandlePlaybackShortcut(event: KeyboardEvent): boolean {
     )
   )
     return false;
-  // Holding Space should not repeatedly toggle play/pause or generate arrays.
-  if (event.repeat && ["Space", "KeyG", "KeyR"].includes(event.code))
+  // Holding a command key should not repeatedly toggle or reset state.
+  if (event.repeat && ["Space", "KeyG", "KeyR", "KeyM"].includes(event.code))
     return false;
   return true;
 }

@@ -11,11 +11,13 @@ import {
 export function ActionButton({
   label,
   shortcut,
+  tooltipSide,
   children,
   ...props
 }: ComponentProps<typeof Button> & {
   label: string;
   shortcut?: string;
+  tooltipSide?: ComponentProps<typeof TooltipContent>["side"];
   children: ReactNode;
 }) {
   return (
@@ -23,7 +25,7 @@ export function ActionButton({
       <TooltipTrigger render={<Button aria-label={label} {...props} />}>
         {children}
       </TooltipTrigger>
-      <TooltipContent>
+      <TooltipContent side={tooltipSide}>
         {label}
         {shortcut && <Kbd>{shortcut}</Kbd>}
       </TooltipContent>

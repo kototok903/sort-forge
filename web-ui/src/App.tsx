@@ -149,13 +149,18 @@ function App() {
   useEffect(() => {
     controller.setSoundConfig({
       waveform: settings.soundWaveform,
-      volume: settings.soundVolume,
+      volume: settings.soundMuted ? 0 : settings.soundVolume,
     });
     // Initialize audio context if sound is enabled
     if (settings.soundWaveform !== "none") {
       controller.initSound();
     }
-  }, [settings.soundWaveform, settings.soundVolume, controller]);
+  }, [
+    settings.soundWaveform,
+    settings.soundVolume,
+    settings.soundMuted,
+    controller,
+  ]);
 
   // Handle engine type change
   const handleEngineTypeChange = useCallback(
@@ -224,10 +229,26 @@ function App() {
   const handleSoundVolumeChange = useCallback(
     (volume: number) => {
       controller.setSoundConfig({ volume });
-      setSettings({ soundVolume: volume });
+      setSettings({ soundVolume: volume, soundMuted: false });
     },
     [controller, setSettings]
   );
+
+  const handleToggleMute = useCallback(() => {
+    if (settings.soundWaveform === "none") return;
+    const soundMuted = !settings.soundMuted;
+    controller.setSoundConfig({
+      volume: soundMuted ? 0 : settings.soundVolume,
+    });
+    if (!soundMuted) controller.resumeSound();
+    setSettings({ soundMuted });
+  }, [
+    controller,
+    settings.soundMuted,
+    settings.soundVolume,
+    settings.soundWaveform,
+    setSettings,
+  ]);
 
   // Generate and start sort
   const handleGenerate = useCallback(async () => {
@@ -336,6 +357,10 @@ function App() {
           e.preventDefault();
           controller.setSpeed(Math.max(0.1, controllerState.speed - 0.5));
           break;
+        case "KeyM":
+          e.preventDefault();
+          handleToggleMute();
+          break;
         case "KeyG":
           e.preventDefault();
           handleGenerate();
@@ -350,6 +375,7 @@ function App() {
     controllerState.playbackState,
     controllerState.speed,
     handleGenerate,
+    handleToggleMute,
   ]);
 
   // Show loading state
@@ -410,6 +436,8 @@ function App() {
             themeId={settings.themeId}
             soundWaveform={settings.soundWaveform}
             soundVolume={settings.soundVolume}
+            soundMuted={settings.soundMuted}
+            onToggleMute={handleToggleMute}
             onEngineTypeChange={handleEngineTypeChange}
             onAlgorithmChange={handleAlgorithmChange}
             onValueModeChange={handleValueModeChange}

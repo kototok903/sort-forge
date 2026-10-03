@@ -36,6 +36,7 @@ export interface Settings {
   sidebarOpen: boolean;
   soundWaveform: SoundWaveform;
   soundVolume: number;
+  soundMuted: boolean;
 }
 
 /**
@@ -61,6 +62,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sidebarOpen: true,
   soundWaveform: DEFAULT_SOUND_CONFIG.waveform,
   soundVolume: DEFAULT_SOUND_CONFIG.volume,
+  soundMuted: false,
 };
 
 /**
@@ -145,6 +147,10 @@ export function validateSettings(
     SOUND_WAVEFORMS.includes(obj.soundWaveform as SoundWaveform)
   ) {
     settings.soundWaveform = obj.soundWaveform as SoundWaveform;
+  }
+
+  if (typeof obj.soundMuted === "boolean") {
+    settings.soundMuted = obj.soundMuted;
   }
 
   // Sound volume - clamp to valid range

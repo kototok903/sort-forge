@@ -16,7 +16,7 @@ import {
 } from "@/sound/types";
 
 import { useState } from "react";
-import { XIcon } from "lucide-react";
+import { Volume2Icon, VolumeXIcon, XIcon } from "lucide-react";
 import { ActionButton } from "@/components/ActionButton";
 import {
   Field,
@@ -58,6 +58,8 @@ interface SidebarProps {
   themeId: ThemeId;
   soundWaveform: SoundWaveform;
   soundVolume: number;
+  soundMuted: boolean;
+  onToggleMute: () => void;
   onEngineTypeChange: (type: EngineType) => void;
   onAlgorithmChange: (algorithm: string) => void;
   onValueModeChange: (valueMode: ValueMode) => void;
@@ -80,6 +82,8 @@ export function Sidebar({
   themeId,
   soundWaveform,
   soundVolume,
+  soundMuted,
+  onToggleMute,
   onEngineTypeChange,
   onAlgorithmChange,
   onValueModeChange,
@@ -219,6 +223,7 @@ export function Sidebar({
         <ActionButton
           label="Generate new array"
           shortcut="G"
+          tooltipSide="left"
           size="sm"
           onClick={onGenerate}
           disabled={disabled}
@@ -257,26 +262,48 @@ export function Sidebar({
                   onValueChange={onSoundWaveformChange}
                 />
               </Field>
-              <Field data-disabled={soundWaveform === "none"}>
-                <div className="flex items-center justify-between gap-2">
-                  <FieldLabel id="volume-label">Volume</FieldLabel>
-                  <output className="font-mono text-sm">
-                    {Math.round(soundVolume * 100)}%
-                  </output>
-                </div>
-                <Slider
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={Math.round(soundVolume * 100)}
-                  onValueChange={(value) =>
-                    onSoundVolumeChange((value as number) / 100)
-                  }
+              <div className="flex items-end gap-2">
+                <ActionButton
+                  label={soundMuted ? "Unmute" : "Mute"}
+                  shortcut="M"
+                  tooltipSide="left"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-pressed={soundMuted}
+                  aria-keyshortcuts="M"
                   disabled={soundWaveform === "none"}
-                  aria-labelledby="volume-label"
-                  getAriaValueText={(_, value) => `${value} percent`}
-                />
-              </Field>
+                  onClick={onToggleMute}
+                >
+                  {soundMuted ? (
+                    <VolumeXIcon data-icon="inline-start" />
+                  ) : (
+                    <Volume2Icon data-icon="inline-start" />
+                  )}
+                </ActionButton>
+                <Field
+                  className="min-w-0 flex-1"
+                  data-disabled={soundWaveform === "none"}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <FieldLabel id="volume-label">Volume</FieldLabel>
+                    <output className="font-mono text-sm">
+                      {Math.round(soundVolume * 100)}%
+                    </output>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round(soundVolume * 100)}
+                    onValueChange={(value) =>
+                      onSoundVolumeChange((value as number) / 100)
+                    }
+                    disabled={soundWaveform === "none"}
+                    aria-labelledby="volume-label"
+                    getAriaValueText={(_, value) => `${value} percent`}
+                  />
+                </Field>
+              </div>
             </FieldGroup>
           </FieldSet>
         </SidebarGroup>
